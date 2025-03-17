@@ -556,3 +556,29 @@ table tr:hover td {
   font-size: 0.8rem;
   min-width: 100px; /* Set a minimum width */
 }
+
+/* Add these styles at the bottom of your CSS file */
+.autofill-loading {
+  margin: 0.5rem 0;
+  font-size: 0.8rem;
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.autofill-loading:before {
+  content: '';
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: 0.5rem;
+  border: 2px solid var(--purple);
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

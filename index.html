@@ -171,6 +171,33 @@
             
             // Restore filter selection
             restoreFilterSelection();
+            
+            // Set up address autofill
+            setupAddressAutofill();
+            
+            // Set up relation card selection
+            const relationCards = document.querySelectorAll('.relation-card');
+            
+            // Initialize - set the checked one as active
+            const checkedRadio = document.querySelector('input[name="relation"]:checked');
+            if (checkedRadio) {
+                const activeCard = document.querySelector(`.relation-card[data-value="${checkedRadio.value}"]`);
+                if (activeCard) activeCard.classList.add('active');
+            }
+            
+            relationCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // Remove active class from all cards
+                    relationCards.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked card
+                    this.classList.add('active');
+                    
+                    // Check the hidden radio button
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                });
+            });
         });
 
         function loadEntriesFromLocalStorage() {
@@ -776,33 +803,6 @@
             updateTable();
         }
 
-        // Add this after your existing script code
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set up relation card selection
-            const relationCards = document.querySelectorAll('.relation-card');
-            
-            // Initialize - set the checked one as active
-            const checkedRadio = document.querySelector('input[name="relation"]:checked');
-            if (checkedRadio) {
-                const activeCard = document.querySelector(`.relation-card[data-value="${checkedRadio.value}"]`);
-                if (activeCard) activeCard.classList.add('active');
-            }
-            
-            relationCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    // Remove active class from all cards
-                    relationCards.forEach(c => c.classList.remove('active'));
-                    
-                    // Add active class to clicked card
-                    this.classList.add('active');
-                    
-                    // Check the hidden radio button
-                    const radio = this.querySelector('input[type="radio"]');
-                    radio.checked = true;
-                });
-            });
-        });
-
         // Save filter selection to localStorage
         function saveFilterSelection() {
             const filterValue = document.getElementById('relationFilter').value;
@@ -839,6 +839,129 @@
 
         function closeEnvelopePreview() {
             document.getElementById('envelopeModal').style.display = 'none';
+        }
+
+        // Add these new functions for address autofilling
+        function setupAddressAutofill() {
+            // Listen for ZIP code input to autofill city and state
+            const zipInput = document.getElementById('zip');
+            zipInput.addEventListener('blur', function() {
+                const zip = this.value.trim();
+                if (zip.length >= 5) {
+                    fetchLocationByZip(zip);
+                }
+            });
+
+            // Listen for city+state combo to autofill ZIP
+            const cityInput = document.getElementById('city');
+            const stateInput = document.getElementById('state');
+
+            cityInput.addEventListener('blur', function() {
+                const city = this.value.trim();
+                const state = stateInput.value.trim();
+                if (city && state && state.length === 2) {
+                    fetchLocationByCityState(city, state);
+                }
+            });
+
+            stateInput.addEventListener('blur', function() {
+                const city = cityInput.value.trim();
+                const state = this.value.trim();
+                if (city && state && state.length === 2) {
+                    fetchLocationByCityState(city, state);
+                }
+            });
+        }
+
+        function fetchLocationByZip(zip) {
+            const formSection = document.querySelector('.form-section');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'autofill-loading';
+            loadingIndicator.textContent = 'Looking up address...';
+            loadingIndicator.style.color = 'var(--purple)';
+            loadingIndicator.style.fontSize = '0.8rem';
+            loadingIndicator.style.marginTop = '0.5rem';
+            loadingIndicator.style.textAlign = 'center';
+            formSection.appendChild(loadingIndicator);
+
+            fetch(`https://api.zippopotam.us/us/${zip}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('ZIP code not found');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.places && data.places.length > 0) {
+                        // Fill in city and state
+                        document.getElementById('city').value = data.places[0]['place name'];
+                        document.getElementById('state').value = data.places[0]['state abbreviation'];
+                        
+                        // Show success message
+                        if (formSection.contains(loadingIndicator)) {
+                            formSection.removeChild(loadingIndicator);
+                        }
+                        showMessage(formSection, 'Address details found!', 'green');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching ZIP data:', error);
+                    if (formSection.contains(loadingIndicator)) {
+                        formSection.removeChild(loadingIndicator);
+                    }
+                    showMessage(formSection, 'ZIP code not found', '#ff4d4d');
+                });
+        }
+
+        function fetchLocationByCityState(city, state) {
+            const formSection = document.querySelector('.form-section');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'autofill-loading';
+            loadingIndicator.textContent = 'Looking up ZIP code...';
+            loadingIndicator.style.color = 'var(--purple)';
+            loadingIndicator.style.fontSize = '0.8rem';
+            loadingIndicator.style.marginTop = '0.5rem';
+            loadingIndicator.style.textAlign = 'center';
+            formSection.appendChild(loadingIndicator);
+
+            // Format the city for the API (lowercase with spaces replaced by underscores)
+            const formattedCity = city.toLowerCase().replace(/\s+/g, '_');
+            
+            fetch(`https://api.zippopotam.us/us/${state.toUpperCase()}/${formattedCity}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Location not found');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.places && data.places.length > 0) {
+                        // Only fill ZIP if it's empty or if there's only one result
+                        const zipInput = document.getElementById('zip');
+                        if (!zipInput.value || data.places.length === 1) {
+                            zipInput.value = data.places[0]['post code'];
+                            
+                            // Show success message
+                            if (formSection.contains(loadingIndicator)) {
+                                formSection.removeChild(loadingIndicator);
+                            }
+                            showMessage(formSection, 'ZIP code found!', 'green');
+                        } else if (data.places.length > 1) {
+                            // Multiple ZIP codes for this city/state combination
+                            if (formSection.contains(loadingIndicator)) {
+                                formSection.removeChild(loadingIndicator);
+                            }
+                            showMessage(formSection, 'Multiple ZIP codes found for this location', '#ff9900');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching location data:', error);
+                    if (formSection.contains(loadingIndicator)) {
+                        formSection.removeChild(loadingIndicator);
+                    }
+                    showMessage(formSection, 'Location not found', '#ff4d4d');
+                });
         }
     </script>
 </body>
