@@ -85,6 +85,7 @@
                 <div class="search-container-centered">
                     <i class="fas fa-search search-icon"></i>
                     <input type="text" id="searchInput" placeholder="Search names, addresses..." class="search-bar-glass">
+                    <div id="guestCounter" class="guest-counter">0 Total Guests</div>
                 </div>
                 
                 <div class="filter-container">
@@ -126,6 +127,22 @@
             <img src="envelope.png" alt="Envelope" class="envelope-img">
             <div id="addressOverlay" class="address-overlay"></div>
             <button class="close-modal" onclick="closeEnvelopePreview()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Add this after your envelope modal -->
+    <div id="detailModal" class="detail-modal" style="display: none;">
+        <div class="detail-container">
+            <h3 id="modalTitle">Entry Details</h3>
+            <div id="detailContent" class="detail-content">
+                <!-- Content will be dynamically populated -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-accent" onclick="closeDetailModal()">Close</button>
+            </div>
+            <button class="close-modal" onclick="closeDetailModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -256,6 +273,7 @@
             if (savedEntries) {
                 entries = JSON.parse(savedEntries);
                 updateTable();
+                updateGuestCounter(entries.length, entries.length);
             }
         }
 
@@ -297,6 +315,7 @@
                         entries = data.entries;
                         updateTable();
                         saveEntriesToLocalStorage();
+                        updateGuestCounter(entries.length, entries.length);
                         
                         // Show success message
                         if (tableSection.contains(loadingIndicator)) {
@@ -337,17 +356,31 @@
                 return;
             }
 
+            // Check for duplicate names
+            const duplicates = entries.filter(entry => 
+                entry.name.toLowerCase() === name.toLowerCase()
+            );
+
+            if (duplicates.length > 0) {
+                // Found potential duplicate(s)
+                if (!confirm(`A guest with the name "${name}" already exists. Are you sure you want to add this entry?`)) {
+                    // User clicked "Cancel" on the confirmation - clear the form
+                    clearEntryForm();
+                    return; // Exit the function
+                }
+                // If user confirms, continue with adding the entry
+            }
+
             const entry = { name, address1, city, state, zip, country, relation };
             
             // Add to local entries first
             entries.push(entry);
             updateTable();
             saveEntriesToLocalStorage();
+            updateGuestCounter(entries.length, entries.length);
             
-            // Clear fields
-            document.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
-            document.getElementById('country').value = 'United States';
-            document.querySelector('input[name="relation"][value="Friend"]').checked = true;
+            // Clear form after successful addition
+            clearEntryForm();
             
             // Then try to send to Google Sheets
             sendToGoogleSheets(entry);
@@ -546,6 +579,22 @@
                     nameCell.dataset.field = 'name';
                     nameCell.dataset.index = index;
                     nameCell.addEventListener('dblclick', startEditing);
+                    // Add click handler for opening detail modal
+                    nameCell.addEventListener('click', function() {
+                        // Find the actual index in the entries array
+                        const entryIndex = entries.findIndex(e => 
+                            e.name === entry.name && 
+                            e.address1 === entry.address1 && 
+                            e.city === entry.city &&
+                            e.state === entry.state &&
+                            e.zip === entry.zip
+                        );
+                        if (entryIndex !== -1) {
+                            showDetailModal(entryIndex);
+                        }
+                    });
+                    nameCell.style.cursor = 'pointer';
+                    nameCell.title = "Click to view details";
                     
                     const addressCell = document.createElement('td');
                     addressCell.textContent = entry.address1;
@@ -735,6 +784,7 @@
                 entries.splice(index, 1);
                 updateTable();
                 saveEntriesToLocalStorage();
+                updateGuestCounter(entries.length, entries.length);
                 
                 // Notify Google Sheets of the deletion
                 notifyGoogleSheetsOfDeletion(deletedEntry);
@@ -1049,6 +1099,9 @@
                 });
             }
             
+            // Update the guest counter
+            updateGuestCounter(filteredEntries.length, entries.length);
+            
             if (filteredEntries.length > 0) {
                 filteredEntries.forEach((entry, index) => {
                     // Existing code to create and append table rows
@@ -1124,6 +1177,172 @@
             } else {
                 table.style.display = 'none';
             }
+        }
+
+        // Add a new function to update the guest counter
+        function updateGuestCounter(filteredCount, totalCount) {
+            const counterElement = document.getElementById('guestCounter');
+            
+            if (filteredCount < totalCount) {
+                // We're showing filtered results
+                counterElement.textContent = `${filteredCount} of ${totalCount} Guests`;
+            } else {
+                // Showing all entries
+                counterElement.textContent = `${totalCount} Total Guests`;
+            }
+        }
+
+        // Add these new functions for the detail modal
+        let currentDetailIndex = null;
+
+        function showDetailModal(index) {
+            const entry = entries[index];
+            currentDetailIndex = index;
+            
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('detailContent');
+            const title = document.getElementById('modalTitle');
+            
+            // Set the title
+            title.textContent = entry.name;
+            
+            // Clear previous content
+            content.innerHTML = '';
+            
+            // Create detail items for each property
+            const properties = [
+                { label: 'Name', value: entry.name, field: 'name' },
+                { label: 'Address', value: entry.address1, field: 'address1' },
+                { label: 'City', value: entry.city, field: 'city' },
+                { label: 'State', value: entry.state, field: 'state' },
+                { label: 'ZIP Code', value: entry.zip, field: 'zip' },
+                { label: 'Country', value: entry.country, field: 'country' },
+                { label: 'Relation', value: entry.relation, field: 'relation' }
+            ];
+            
+            properties.forEach(prop => {
+                const item = document.createElement('div');
+                item.className = 'detail-item';
+                
+                const label = document.createElement('div');
+                label.className = 'detail-label';
+                label.textContent = prop.label;
+                
+                const value = document.createElement('div');
+                value.className = 'detail-value';
+                value.textContent = prop.value;
+                value.dataset.field = prop.field;
+                value.dataset.originalValue = prop.value;
+                value.title = "Double-click to edit";
+                
+                // Add double-click event for editing
+                if (prop.field !== 'relation') { // Don't allow editing relation in the modal
+                    value.addEventListener('dblclick', function(event) {
+                        startModalEditing(event, index);
+                    });
+                    value.style.cursor = 'pointer';
+                }
+                
+                item.appendChild(label);
+                item.appendChild(value);
+                content.appendChild(item);
+            });
+            
+            // Show the modal
+            modal.style.display = 'flex';
+            
+            // Add event listener to close when clicking outside
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    closeDetailModal();
+                }
+            });
+        }
+
+        // Add function to handle modal editing
+        function startModalEditing(event, index) {
+            const valueElement = event.target;
+            const field = valueElement.dataset.field;
+            const originalValue = valueElement.dataset.originalValue;
+            
+            // Create input element
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = originalValue;
+            input.className = 'modal-edit-input';
+            
+            // Replace the text with the input
+            valueElement.textContent = '';
+            valueElement.appendChild(input);
+            
+            // Focus the input
+            input.focus();
+            
+            // Handle saving the edit
+            function saveModalEdit() {
+                const newValue = input.value.trim();
+                
+                if (newValue !== originalValue) {
+                    // Update the entry
+                    entries[index][field] = newValue;
+                    
+                    // Update the display
+                    valueElement.textContent = newValue;
+                    valueElement.dataset.originalValue = newValue;
+                    
+                    // If we're editing the name, update the modal title too
+                    if (field === 'name') {
+                        document.getElementById('modalTitle').textContent = newValue;
+                    }
+                    
+                    // Save to local storage
+                    saveEntriesToLocalStorage();
+                    
+                    // Update the table
+                    updateTable();
+                    
+                    // Update Google Sheets
+                    updateGoogleSheets(entries[index]);
+                } else {
+                    // Just restore the original text
+                    valueElement.textContent = originalValue;
+                }
+            }
+            
+            // Handle input events
+            input.addEventListener('blur', saveModalEdit);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    saveModalEdit();
+                } else if (e.key === 'Escape') {
+                    valueElement.textContent = originalValue;
+                }
+            });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+            currentDetailIndex = null;
+        }
+
+        // Add a new function to clear the entry form
+        function clearEntryForm() {
+            // Clear all text inputs
+            document.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+            
+            // Reset country to default value
+            document.getElementById('country').value = 'United States';
+            
+            // Reset relation to default (Friend)
+            document.querySelector('input[name="relation"][value="Friend"]').checked = true;
+            
+            // Update relation card UI
+            document.querySelectorAll('.relation-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.dataset.value === 'Friend') {
+                    card.classList.add('active');
+                }
+            });
         }
     </script>
 </body>

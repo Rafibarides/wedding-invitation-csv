@@ -697,6 +697,10 @@ table tr:hover td {
   max-width: 500px;
   margin: -2.5rem auto 1.5rem auto;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
 }
 
 .search-bar-glass {
@@ -713,6 +717,7 @@ table tr:hover td {
   color: var(--dark-gray);
   position: relative; /* Ensure proper stacking context */
   z-index: 1; /* Place below the icon */
+  padding-right: 0.75rem;
 }
 
 .search-bar-glass::placeholder {
@@ -725,24 +730,160 @@ table tr:hover td {
   outline: none;
 }
 
-/* Position the search icon for the centered search bar */
+/* Update guest counter to be positioned outside the search bar */
+.guest-counter {
+  font-size: 0.8rem;
+  color: rgba(51, 51, 51, 0.7);
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  white-space: nowrap;
+  position: static;
+  transform: none;
+  flex-shrink: 0;
+}
+
+/* Update the search icon positioning */
 .search-container-centered .search-icon {
   position: absolute;
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(51, 51, 51, 0.7); /* Slightly transparent dark gray */
-  pointer-events: none; /* Make sure icon doesn't interfere with input */
-  /* Add these properties to prevent blur effect from affecting the icon */
-  z-index: 2; /* Place icon above the search input */
-  backdrop-filter: none; /* Remove any backdrop filter effects */
-  -webkit-backdrop-filter: none; /* For Safari support */
+  color: rgba(51, 51, 51, 0.7);
+  pointer-events: none;
+  z-index: 2;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  left: 0.75rem;
 }
 
-/* Update responsive design for search positioning */
-@media (max-width: 992px) {
+/* Add responsive behavior for smaller screens */
+@media (max-width: 768px) {
   .search-container-centered {
-    margin-top: 0; /* Reset margin on smaller screens */
-    margin-bottom: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0;
   }
+  
+  .guest-counter {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Add styles for the detail modal */
+.detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.detail-container {
+  position: relative;
+  background-color: var(--white);
+  border-radius: 10px; /* Slightly smaller border radius */
+  padding: 1.25rem; /* Reduced padding further */
+  max-width: 360px; /* Even smaller max-width */
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.detail-container h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem; /* Smaller margin */
+  color: var(--purple);
+  border-bottom: 1px solid var(--light-gray); /* Thinner border */
+  padding-bottom: 0.4rem; /* Smaller padding */
+  font-size: 1.1rem; /* Smaller title font */
+}
+
+.detail-content {
+  margin-bottom: 0.75rem; /* Smaller bottom margin */
+}
+
+.detail-item {
+  margin-bottom: 0.5rem; /* Less space between items */
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.7rem; /* Smaller label text */
+  color: var(--dark-gray);
+  opacity: 0.7;
+  margin-bottom: 0.1rem; /* Less space between label and value */
+}
+
+.detail-value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.2rem 0.3rem;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.detail-value:hover {
+  background-color: rgba(93, 89, 217, 0.05);
+}
+
+.detail-value[data-field]:after {
+  content: '✎';
+  font-size: 0.7rem;
+  margin-left: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.detail-value[data-field]:hover:after {
+  opacity: 0.5;
+}
+
+/* Style for the edit input in the modal */
+.modal-edit-input {
+  width: 100%;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--purple);
+  border-radius: 3px;
+  font-family: inherit;
+  margin: 0;
+  height: auto;
+}
+
+.modal-edit-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(93, 89, 217, 0.2);
+}
+
+/* Center the single close button */
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.modal-actions .btn {
+  padding: 0.4rem 0.9rem; /* Smaller button padding */
+  min-width: 70px; /* Smaller minimum width */
+  font-size: 0.8rem; /* Smaller button text */
+}
+
+/* Make the close button smaller */
+.detail-modal .close-modal {
+  width: 26px; /* Smaller close button */
+  height: 26px; /* Smaller close button */
+  top: 8px; /* Position closer to edge */
+  right: 8px; /* Position closer to edge */
+}
+
+.detail-modal .close-modal i {
+  font-size: 0.8rem; /* Smaller icon */
 }
