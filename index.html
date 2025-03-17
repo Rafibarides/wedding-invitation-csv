@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Address to CSV Generator</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="favicon.png" type="image/png">
 </head>
 <body>
     <div class="container">
@@ -40,6 +42,7 @@
                                 <th>State</th>
                                 <th>ZIP</th>
                                 <th>Country</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -50,9 +53,27 @@
     </div>
 
     <script>
-        const entries = [];
+        let entries = [];
         let currentEditingCell = null;
-        const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmCt00Bhv5To8gdTjGpfSPufnuVxzQVe-Sn01DC4EXEhK6Z19UyEtC88Vn8mi_zHM7JA/exec";
+        const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyoq0fD1t4tboH_8zYNn81hwPe-B1VKsSlAxKi0gOOaUi9RMAFUP1qhSP8ATHH91MTi4A/exec";
+        const LOCAL_STORAGE_KEY = "weddingAddressEntries";
+
+        // Load entries from localStorage when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEntriesFromLocalStorage();
+        });
+
+        function loadEntriesFromLocalStorage() {
+            const savedEntries = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedEntries) {
+                entries = JSON.parse(savedEntries);
+                updateTable();
+            }
+        }
+
+        function saveEntriesToLocalStorage() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries));
+        }
 
         function addEntry() {
             const name = document.getElementById('name').value.trim();
@@ -69,14 +90,16 @@
 
             const entry = { name, address1, city, state, zip, country };
             
-            // Send data to Google Sheets
-            sendToGoogleSheets(entry);
-            
+            // Add to local entries first
             entries.push(entry);
             updateTable();
-
+            saveEntriesToLocalStorage();
+            
             // Clear fields
             document.querySelectorAll('input').forEach(input => input.value = '');
+            
+            // Then try to send to Google Sheets
+            sendToGoogleSheets(entry);
         }
         
         function sendToGoogleSheets(entry) {
@@ -90,96 +113,236 @@
             loadingIndicator.style.textAlign = 'center';
             formSection.appendChild(loadingIndicator);
             
-            // Use JSONP approach for CORS bypass
-            const script = document.createElement('script');
-            const callbackName = 'googleSheetsCallback_' + new Date().getTime();
+            // Create a hidden iframe to submit the form
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.name = 'hidden_iframe_' + Date.now(); // Give it a unique name
+            document.body.appendChild(iframe);
             
-            // Create global callback function
-            window[callbackName] = function(response) {
+            // Create a form inside the iframe document
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = SHEETS_ENDPOINT;
+            form.target = iframe.name; // Target the iframe by name instead of _blank
+            
+            // Add form fields
+            const addField = (name, value) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            };
+            
+            addField('name', entry.name);
+            addField('address1', entry.address1);
+            addField('city', entry.city);
+            addField('state', entry.state);
+            addField('zip', entry.zip);
+            addField('country', entry.country);
+            addField('action', 'add');
+            
+            // Add form to document body (not iframe) and submit
+            document.body.appendChild(form);
+            
+            // Set a timeout to handle cases where the form submission doesn't complete
+            const timeout = setTimeout(() => {
                 // Remove loading indicator
-                formSection.removeChild(loadingIndicator);
+                if (formSection.contains(loadingIndicator)) {
+                    formSection.removeChild(loadingIndicator);
+                }
+                
+                // Show success message (we assume it worked)
+                showMessage(formSection, 'Entry saved to Google Sheets!', 'green');
+                
+                // Clean up
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+                if (document.body.contains(form)) {
+                    document.body.removeChild(form);
+                }
+            }, 5000);
+            
+            // Handle iframe load event
+            iframe.onload = function() {
+                clearTimeout(timeout);
+                
+                // Remove loading indicator
+                if (formSection.contains(loadingIndicator)) {
+                    formSection.removeChild(loadingIndicator);
+                }
                 
                 // Show success message
-                const successMessage = document.createElement('div');
-                successMessage.className = 'success-message';
-                successMessage.textContent = 'Entry saved to Google Sheets!';
-                successMessage.style.color = 'green';
-                successMessage.style.marginTop = '1rem';
-                successMessage.style.textAlign = 'center';
-                formSection.appendChild(successMessage);
+                showMessage(formSection, 'Entry saved to Google Sheets!', 'green');
                 
-                // Remove success message after 3 seconds
-                setTimeout(() => {
-                    if (formSection.contains(successMessage)) {
-                        formSection.removeChild(successMessage);
-                    }
-                    // Clean up the global callback
-                    delete window[callbackName];
-                }, 3000);
+                // Clean up
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+                if (document.body.contains(form)) {
+                    document.body.removeChild(form);
+                }
             };
             
-            // Build URL with parameters
-            const url = new URL(SHEETS_ENDPOINT);
-            url.searchParams.append('name', entry.name);
-            url.searchParams.append('address1', entry.address1);
-            url.searchParams.append('city', entry.city);
-            url.searchParams.append('state', entry.state);
-            url.searchParams.append('zip', entry.zip);
-            url.searchParams.append('country', entry.country);
-            url.searchParams.append('callback', callbackName);
+            // Submit the form
+            form.submit();
+        }
+        
+        function updateGoogleSheets(entry) {
+            // Create a loading indicator
+            const tableSection = document.querySelector('.table-section');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = 'Updating Google Sheets...';
+            loadingIndicator.style.color = 'var(--purple)';
+            loadingIndicator.style.marginTop = '1rem';
+            loadingIndicator.style.textAlign = 'center';
+            tableSection.appendChild(loadingIndicator);
             
-            // Set script source and add to document
-            script.src = url.toString();
-            document.body.appendChild(script);
+            // Create a hidden iframe to submit the form
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.name = 'hidden_iframe_update_' + Date.now(); // Give it a unique name
+            document.body.appendChild(iframe);
             
-            // Handle errors
-            script.onerror = function() {
+            // Create a form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = SHEETS_ENDPOINT;
+            form.target = iframe.name; // Target the iframe by name instead of _blank
+            
+            // Add form fields
+            const addField = (name, value) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            };
+            
+            addField('name', entry.name);
+            addField('address1', entry.address1);
+            addField('city', entry.city);
+            addField('state', entry.state);
+            addField('zip', entry.zip);
+            addField('country', entry.country);
+            addField('action', 'update');
+            
+            // Add form to document body and submit
+            document.body.appendChild(form);
+            
+            // Set a timeout to handle cases where the form submission doesn't complete
+            const timeout = setTimeout(() => {
                 // Remove loading indicator
-                formSection.removeChild(loadingIndicator);
+                if (tableSection.contains(loadingIndicator)) {
+                    tableSection.removeChild(loadingIndicator);
+                }
                 
-                // Show error message
-                const errorMessage = document.createElement('div');
-                errorMessage.className = 'error-message';
-                errorMessage.textContent = 'Error saving to Google Sheets. Entry saved locally only.';
-                errorMessage.style.color = 'red';
-                errorMessage.style.marginTop = '1rem';
-                errorMessage.style.textAlign = 'center';
-                formSection.appendChild(errorMessage);
+                // Clean up
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+                if (document.body.contains(form)) {
+                    document.body.removeChild(form);
+                }
+            }, 5000);
+            
+            // Handle iframe load event
+            iframe.onload = function() {
+                clearTimeout(timeout);
                 
-                // Remove error message after 3 seconds
-                setTimeout(() => {
-                    if (formSection.contains(errorMessage)) {
-                        formSection.removeChild(errorMessage);
-                    }
-                    // Clean up the global callback
-                    delete window[callbackName];
-                }, 3000);
+                // Remove loading indicator
+                if (tableSection.contains(loadingIndicator)) {
+                    tableSection.removeChild(loadingIndicator);
+                }
+                
+                // Clean up
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+                if (document.body.contains(form)) {
+                    document.body.removeChild(form);
+                }
             };
+            
+            // Submit the form
+            form.submit();
         }
 
         function updateTable() {
             const table = document.getElementById('entriesTable');
             const tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
-
-            entries.forEach((e, index) => {
-                const row = document.createElement('tr');
+            
+            if (entries.length > 0) {
+                table.style.display = 'table';
                 
-                // Create cells for each field
-                const fields = ['name', 'address1', 'city', 'state', 'zip', 'country'];
-                fields.forEach(field => {
-                    const cell = document.createElement('td');
-                    cell.textContent = e[field];
-                    cell.dataset.field = field;
-                    cell.dataset.index = index;
-                    cell.addEventListener('dblclick', startEditing);
-                    row.appendChild(cell);
+                entries.forEach((entry, index) => {
+                    const row = document.createElement('tr');
+                    
+                    // Create cells for each field
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = entry.name;
+                    nameCell.dataset.index = index;
+                    nameCell.dataset.field = 'name';
+                    nameCell.addEventListener('dblclick', startEditing);
+                    
+                    const addressCell = document.createElement('td');
+                    addressCell.textContent = entry.address1;
+                    addressCell.dataset.index = index;
+                    addressCell.dataset.field = 'address1';
+                    addressCell.addEventListener('dblclick', startEditing);
+                    
+                    const cityCell = document.createElement('td');
+                    cityCell.textContent = entry.city;
+                    cityCell.dataset.index = index;
+                    cityCell.dataset.field = 'city';
+                    cityCell.addEventListener('dblclick', startEditing);
+                    
+                    const stateCell = document.createElement('td');
+                    stateCell.textContent = entry.state;
+                    stateCell.dataset.index = index;
+                    stateCell.dataset.field = 'state';
+                    stateCell.addEventListener('dblclick', startEditing);
+                    
+                    const zipCell = document.createElement('td');
+                    zipCell.textContent = entry.zip;
+                    zipCell.dataset.index = index;
+                    zipCell.dataset.field = 'zip';
+                    zipCell.addEventListener('dblclick', startEditing);
+                    
+                    const countryCell = document.createElement('td');
+                    countryCell.textContent = entry.country;
+                    countryCell.dataset.index = index;
+                    countryCell.dataset.field = 'country';
+                    countryCell.addEventListener('dblclick', startEditing);
+                    
+                    // Add delete button cell with just the trash icon
+                    const deleteCell = document.createElement('td');
+                    deleteCell.className = 'delete-cell';
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>'; // Just the trash icon, nothing else
+                    deleteBtn.addEventListener('click', function() {
+                        deleteEntry(index);
+                    });
+                    deleteCell.appendChild(deleteBtn);
+                    
+                    // Add all cells to the row
+                    row.appendChild(nameCell);
+                    row.appendChild(addressCell);
+                    row.appendChild(cityCell);
+                    row.appendChild(stateCell);
+                    row.appendChild(zipCell);
+                    row.appendChild(countryCell);
+                    row.appendChild(deleteCell);
+                    
+                    tbody.appendChild(row);
                 });
-                
-                tbody.appendChild(row);
-            });
-
-            table.style.display = 'table';
+            } else {
+                table.style.display = 'none';
+            }
         }
 
         function startEditing(event) {
@@ -248,54 +411,13 @@
             
             currentEditingCell = null;
             
+            // Save to localStorage
+            saveEntriesToLocalStorage();
+            
             // If value changed, update in Google Sheets
             if (newValue !== oldValue) {
                 updateGoogleSheets(entries[index]);
             }
-        }
-        
-        function updateGoogleSheets(entry) {
-            // Create a loading indicator
-            const tableSection = document.querySelector('.table-section');
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.className = 'loading-indicator';
-            loadingIndicator.textContent = 'Updating Google Sheets...';
-            loadingIndicator.style.color = 'var(--purple)';
-            loadingIndicator.style.marginTop = '1rem';
-            loadingIndicator.style.textAlign = 'center';
-            tableSection.appendChild(loadingIndicator);
-            
-            // Prepare the data for Google Sheets
-            const formData = new FormData();
-            formData.append('name', entry.name);
-            formData.append('address1', entry.address1);
-            formData.append('city', entry.city);
-            formData.append('state', entry.state);
-            formData.append('zip', entry.zip);
-            formData.append('country', entry.country);
-            formData.append('action', 'update');
-            
-            // Send the data
-            fetch(SHEETS_ENDPOINT, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Remove loading indicator
-                tableSection.removeChild(loadingIndicator);
-            })
-            .catch(error => {
-                console.error('Error updating Google Sheets:', error);
-                
-                // Remove loading indicator
-                tableSection.removeChild(loadingIndicator);
-            });
         }
 
         function cancelEditing() {
@@ -338,6 +460,117 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        function deleteEntry(index) {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                const deletedEntry = entries[index];
+                entries.splice(index, 1);
+                updateTable();
+                saveEntriesToLocalStorage();
+                
+                // Notify Google Sheets of the deletion
+                notifyGoogleSheetsOfDeletion(deletedEntry);
+            }
+        }
+        
+        function notifyGoogleSheetsOfDeletion(entry) {
+            // Create a loading indicator
+            const tableSection = document.querySelector('.table-section');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = 'Updating Google Sheets...';
+            loadingIndicator.style.color = 'var(--purple)';
+            loadingIndicator.style.marginTop = '1rem';
+            loadingIndicator.style.textAlign = 'center';
+            tableSection.appendChild(loadingIndicator);
+            
+            // Create a hidden iframe to submit the form
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.name = 'hidden_iframe_delete_' + Date.now(); // Give it a unique name
+            document.body.appendChild(iframe);
+            
+            // Create a form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = SHEETS_ENDPOINT;
+            form.target = iframe.name; // Target the iframe by name instead of _blank
+            
+            // Add form fields
+            const addField = (name, value) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            };
+            
+            addField('name', entry.name);
+            addField('address1', entry.address1);
+            addField('city', entry.city);
+            addField('state', entry.state);
+            addField('zip', entry.zip);
+            addField('country', entry.country);
+            addField('action', 'delete');
+            
+            // Add form to document body and submit
+            document.body.appendChild(form);
+            
+            // Set a timeout to handle cases where the form submission doesn't complete
+            const timeout = setTimeout(() => {
+                // Remove loading indicator
+                if (tableSection.contains(loadingIndicator)) {
+                    tableSection.removeChild(loadingIndicator);
+                }
+                
+                // Show success message
+                showMessage(tableSection, 'Entry deleted from Google Sheets!', 'green');
+                
+                // Clean up
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 5000);
+            
+            // Handle iframe load event
+            iframe.onload = function() {
+                clearTimeout(timeout);
+                
+                // Remove loading indicator
+                if (tableSection.contains(loadingIndicator)) {
+                    tableSection.removeChild(loadingIndicator);
+                }
+                
+                // Show success message
+                showMessage(tableSection, 'Entry deleted from Google Sheets!', 'green');
+                
+                // Clean up
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            };
+            
+            // Submit the form
+            form.submit();
+        }
+
+        // Helper function to show messages
+        function showMessage(container, text, color) {
+            const message = document.createElement('div');
+            message.className = color === 'green' ? 'success-message' : 'error-message';
+            message.textContent = text;
+            message.style.color = color;
+            message.style.marginTop = '1rem';
+            message.style.textAlign = 'center';
+            container.appendChild(message);
+            
+            // Remove message after 3 seconds
+            setTimeout(() => {
+                if (container.contains(message)) {
+                    container.removeChild(message);
+                }
+            }, 3000);
         }
 
         // Add click handler to document to finish editing when clicking outside

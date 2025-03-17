@@ -73,6 +73,7 @@ a:hover {
   transition: all 0.2s ease;
   border: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 0.25rem;
 }
 
 .btn:hover {
@@ -231,17 +232,16 @@ footer {
 /* Layout for side-by-side view */
 .split-layout {
   display: flex;
-  gap: 2rem;
-  margin-top: 2rem;
+  gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .form-section {
-  flex: 0 0 40%;
+  flex: 0 0 35%;
 }
 
 .table-section {
-  flex: 0 0 60%;
-  overflow-x: auto;
+  flex: 0 0 65%;
 }
 
 /* Table styling - updated for more compact display */
@@ -279,13 +279,15 @@ table tr:hover td {
 
 /* Compact table for the entries list */
 .table-section table {
-  font-size: 0.8125rem; /* Even smaller for the entries table */
+  font-size: 0.75rem;
 }
 
 .table-section th,
 .table-section td {
-  padding: 0.4rem 0.6rem; /* More compact padding */
-  white-space: nowrap; /* Prevent text wrapping */
+  padding: 0.35rem 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Make sure the table container allows vertical scrolling but prevents horizontal */
@@ -331,4 +333,44 @@ table tr:hover td {
 
 .table-section td:hover:after {
   width: 100%;
+}
+
+/* Delete button styling */
+.delete-cell {
+  width: 50px;
+  text-align: center;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: #ff4d4d;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.delete-btn:hover {
+  background-color: rgba(255, 77, 77, 0.1);
+  transform: scale(1.1);
+}
+
+/* Make sure the table header has the delete column */
+.table-section table thead tr {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr 50px;
+}
+
+.table-section table tbody tr {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr 50px;
+}
+
+/* Add this to your CSS file to make the title smaller */
+.container h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-top: 0.75rem;
 }
