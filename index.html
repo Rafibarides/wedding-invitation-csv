@@ -21,7 +21,28 @@
                     <input type="text" id="city" placeholder="City" required>
                     <input type="text" id="state" placeholder="State" required>
                     <input type="text" id="zip" placeholder="ZIP Code" required>
-                    <input type="text" id="country" placeholder="Country" required>
+                    <input type="text" id="country" placeholder="Country" value="United States" required>
+                    
+                    <div class="relation-container">
+                        <div class="relation-cards">
+                            <div class="relation-card" data-value="Friend">
+                                <input type="radio" name="relation" value="Friend" checked hidden>
+                                <span>Friend</span>
+                            </div>
+                            <div class="relation-card" data-value="Co-worker">
+                                <input type="radio" name="relation" value="Co-worker" hidden>
+                                <span>Co-worker</span>
+                            </div>
+                            <div class="relation-card" data-value="Extended Family">
+                                <input type="radio" name="relation" value="Extended Family" hidden>
+                                <span>Extended Family</span>
+                            </div>
+                            <div class="relation-card" data-value="Neighbor">
+                                <input type="radio" name="relation" value="Neighbor" hidden>
+                                <span>Neighbor</span>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="mt-2">
                         <button class="btn btn-primary" onclick="addEntry()">Add Entry</button>
@@ -32,6 +53,15 @@
             
             <!-- Table Section (Right) -->
             <div class="table-section">
+                <div class="filter-container">
+                    <select id="relationFilter" onchange="applyFilter()">
+                        <option value="all">All Relations</option>
+                        <option value="Friend">Friend</option>
+                        <option value="Co-worker">Co-worker</option>
+                        <option value="Extended Family">Extended Family</option>
+                        <option value="Neighbor">Neighbor</option>
+                    </select>
+                </div>
                 <div class="table-container">
                     <table id="entriesTable" style="display:none;">
                         <thead>
@@ -42,6 +72,7 @@
                                 <th>State</th>
                                 <th>ZIP</th>
                                 <th>Country</th>
+                                <th>Relation</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -55,12 +86,17 @@
     <script>
         let entries = [];
         let currentEditingCell = null;
-        const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyoq0fD1t4tboH_8zYNn81hwPe-B1VKsSlAxKi0gOOaUi9RMAFUP1qhSP8ATHH91MTi4A/exec";
+        const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwiHj1DGbNIsXQ-7YNSyPO3iBPE5FEaoggu26oekm6kDhiSsJmrlW9eTQkeghM7iB_q7A/exec";
         const LOCAL_STORAGE_KEY = "weddingAddressEntries";
+        const LAST_SYNC_KEY = "lastSheetsSync";
 
-        // Load entries from localStorage when page loads
+        // Load entries when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            // First load from localStorage for immediate display
             loadEntriesFromLocalStorage();
+            
+            // Then fetch from Google Sheets to get the latest data
+            fetchEntriesFromGoogleSheets();
         });
 
         function loadEntriesFromLocalStorage() {
@@ -73,7 +109,96 @@
 
         function saveEntriesToLocalStorage() {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries));
+            // Save the last sync time
+            localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
         }
+
+        // New function to fetch entries from Google Sheets
+        function fetchEntriesFromGoogleSheets() {
+            // Show loading indicator
+            const tableSection = document.querySelector('.table-section');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = 'Syncing with Google Sheets...';
+            loadingIndicator.style.color = 'var(--purple)';
+            loadingIndicator.style.marginTop = '1rem';
+            loadingIndicator.style.textAlign = 'center';
+            tableSection.appendChild(loadingIndicator);
+
+            // Create a fetch request to get data
+            fetch(`${SHEETS_ENDPOINT}?action=get`)
+                .then(response => {
+                    // Check if the response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.entries) {
+                        // Update entries with data from sheets
+                        entries = data.entries;
+                        updateTable();
+                        saveEntriesToLocalStorage();
+                        
+                        // Show success message
+                        if (tableSection.contains(loadingIndicator)) {
+                            tableSection.removeChild(loadingIndicator);
+                        }
+                        showMessage(tableSection, 'Synced with Google Sheets!', 'green');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching from Google Sheets:', error);
+                    
+                    // Show error message
+                    if (tableSection.contains(loadingIndicator)) {
+                        tableSection.removeChild(loadingIndicator);
+                    }
+                    
+                    // More descriptive error message
+                    let errorMessage = 'Could not sync with Google Sheets. Using local data.';
+                    if (error.message === 'Response is not JSON') {
+                        errorMessage = 'Google Sheets API not properly configured. Using local data.';
+                    }
+                    
+                    showMessage(tableSection, errorMessage, '#ff4d4d');
+                });
+        }
+
+        // Add a refresh button to manually sync with Google Sheets
+        function addRefreshButton() {
+            const tableContainer = document.querySelector('.table-container');
+            const refreshContainer = document.createElement('div');
+            refreshContainer.style.textAlign = 'right';
+            refreshContainer.style.marginBottom = '0.5rem';
+            
+            const refreshButton = document.createElement('button');
+            refreshButton.className = 'btn-icon';
+            refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sync';
+            refreshButton.style.fontSize = '0.75rem';
+            refreshButton.style.padding = '0.25rem 0.5rem';
+            refreshButton.style.backgroundColor = 'var(--purple)';
+            refreshButton.style.color = 'white';
+            refreshButton.style.border = 'none';
+            refreshButton.style.borderRadius = '4px';
+            refreshButton.style.cursor = 'pointer';
+            
+            refreshButton.addEventListener('click', fetchEntriesFromGoogleSheets);
+            
+            refreshContainer.appendChild(refreshButton);
+            tableContainer.parentNode.insertBefore(refreshContainer, tableContainer);
+        }
+
+        // Call this function when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            addRefreshButton();
+        });
 
         function addEntry() {
             const name = document.getElementById('name').value.trim();
@@ -82,13 +207,14 @@
             const state = document.getElementById('state').value.trim();
             const zip = document.getElementById('zip').value.trim();
             const country = document.getElementById('country').value.trim();
+            const relation = document.querySelector('input[name="relation"]:checked').value;
 
             if (!name || !address1 || !city || !state || !zip || !country) {
                 alert('Please fill in all required fields.');
                 return;
             }
 
-            const entry = { name, address1, city, state, zip, country };
+            const entry = { name, address1, city, state, zip, country, relation };
             
             // Add to local entries first
             entries.push(entry);
@@ -96,7 +222,9 @@
             saveEntriesToLocalStorage();
             
             // Clear fields
-            document.querySelectorAll('input').forEach(input => input.value = '');
+            document.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+            document.getElementById('country').value = 'United States';
+            document.querySelector('input[name="relation"][value="Friend"]').checked = true;
             
             // Then try to send to Google Sheets
             sendToGoogleSheets(entry);
@@ -140,6 +268,7 @@
             addField('state', entry.state);
             addField('zip', entry.zip);
             addField('country', entry.country);
+            addField('relation', entry.relation);
             addField('action', 'add');
             
             // Add form to document body (not iframe) and submit
@@ -227,6 +356,7 @@
             addField('state', entry.state);
             addField('zip', entry.zip);
             addField('country', entry.country);
+            addField('relation', entry.relation);
             addField('action', 'update');
             
             // Add form to document body and submit
@@ -275,71 +405,56 @@
             const tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
             
-            if (entries.length > 0) {
-                table.style.display = 'table';
-                
-                entries.forEach((entry, index) => {
-                    const row = document.createElement('tr');
+            // Get current filter value
+            const filterValue = document.getElementById('relationFilter').value;
+            
+            // Filter entries based on selection
+            const filteredEntries = filterValue === 'all' 
+                ? entries 
+                : entries.filter(entry => entry.relation === filterValue);
+            
+            if (filteredEntries.length > 0) {
+                filteredEntries.forEach((entry, index) => {
+                    const tr = document.createElement('tr');
+                    
+                    // Find the original index in the entries array
+                    const originalIndex = entries.findIndex(e => 
+                        e.name === entry.name && 
+                        e.address1 === entry.address1 && 
+                        e.city === entry.city);
                     
                     // Create cells for each field
-                    const nameCell = document.createElement('td');
-                    nameCell.textContent = entry.name;
-                    nameCell.dataset.index = index;
-                    nameCell.dataset.field = 'name';
-                    nameCell.addEventListener('dblclick', startEditing);
+                    const createCell = (field, value) => {
+                        const td = document.createElement('td');
+                        td.textContent = value;
+                        td.dataset.index = originalIndex;
+                        td.dataset.field = field;
+                        td.addEventListener('click', startEditing);
+                        return td;
+                    };
                     
-                    const addressCell = document.createElement('td');
-                    addressCell.textContent = entry.address1;
-                    addressCell.dataset.index = index;
-                    addressCell.dataset.field = 'address1';
-                    addressCell.addEventListener('dblclick', startEditing);
+                    tr.appendChild(createCell('name', entry.name));
+                    tr.appendChild(createCell('address1', entry.address1));
+                    tr.appendChild(createCell('city', entry.city));
+                    tr.appendChild(createCell('state', entry.state));
+                    tr.appendChild(createCell('zip', entry.zip));
+                    tr.appendChild(createCell('country', entry.country));
+                    tr.appendChild(createCell('relation', entry.relation));
                     
-                    const cityCell = document.createElement('td');
-                    cityCell.textContent = entry.city;
-                    cityCell.dataset.index = index;
-                    cityCell.dataset.field = 'city';
-                    cityCell.addEventListener('dblclick', startEditing);
-                    
-                    const stateCell = document.createElement('td');
-                    stateCell.textContent = entry.state;
-                    stateCell.dataset.index = index;
-                    stateCell.dataset.field = 'state';
-                    stateCell.addEventListener('dblclick', startEditing);
-                    
-                    const zipCell = document.createElement('td');
-                    zipCell.textContent = entry.zip;
-                    zipCell.dataset.index = index;
-                    zipCell.dataset.field = 'zip';
-                    zipCell.addEventListener('dblclick', startEditing);
-                    
-                    const countryCell = document.createElement('td');
-                    countryCell.textContent = entry.country;
-                    countryCell.dataset.index = index;
-                    countryCell.dataset.field = 'country';
-                    countryCell.addEventListener('dblclick', startEditing);
-                    
-                    // Add delete button cell with just the trash icon
+                    // Add delete button
                     const deleteCell = document.createElement('td');
                     deleteCell.className = 'delete-cell';
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-btn';
-                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>'; // Just the trash icon, nothing else
-                    deleteBtn.addEventListener('click', function() {
-                        deleteEntry(index);
-                    });
+                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                    deleteBtn.addEventListener('click', () => deleteEntry(originalIndex));
                     deleteCell.appendChild(deleteBtn);
+                    tr.appendChild(deleteCell);
                     
-                    // Add all cells to the row
-                    row.appendChild(nameCell);
-                    row.appendChild(addressCell);
-                    row.appendChild(cityCell);
-                    row.appendChild(stateCell);
-                    row.appendChild(zipCell);
-                    row.appendChild(countryCell);
-                    row.appendChild(deleteCell);
-                    
-                    tbody.appendChild(row);
+                    tbody.appendChild(tr);
                 });
+                
+                table.style.display = 'table';
             } else {
                 table.style.display = 'none';
             }
@@ -578,6 +693,38 @@
             if (currentEditingCell && !currentEditingCell.contains(event.target)) {
                 finishEditing();
             }
+        });
+
+        // Add the applyFilter function
+        function applyFilter() {
+            updateTable();
+        }
+
+        // Add this after your existing script code
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up relation card selection
+            const relationCards = document.querySelectorAll('.relation-card');
+            
+            // Initialize - set the checked one as active
+            const checkedRadio = document.querySelector('input[name="relation"]:checked');
+            if (checkedRadio) {
+                const activeCard = document.querySelector(`.relation-card[data-value="${checkedRadio.value}"]`);
+                if (activeCard) activeCard.classList.add('active');
+            }
+            
+            relationCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // Remove active class from all cards
+                    relationCards.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked card
+                    this.classList.add('active');
+                    
+                    // Check the hidden radio button
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                });
+            });
         });
     </script>
 </body>
