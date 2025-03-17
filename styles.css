@@ -58,7 +58,7 @@ a:hover {
 .container {
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 2rem auto 0;
   padding: 0 1.5rem;
 }
 
@@ -141,6 +141,8 @@ input, textarea, select {
   border: 1px solid var(--medium-gray);
   border-radius: 8px;
   font-family: inherit;
+  box-sizing: border-box;
+  height: 42px;
 }
 
 input:focus, textarea:focus, select:focus {
@@ -581,4 +583,166 @@ table tr:hover td {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Update title cards container to display cards side by side */
+.title-cards {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 0.75rem; /* Add gap between cards */
+  margin-bottom: 0.75rem;
+}
+
+.title-card {
+  background-color: var(--light-gray);
+  color: var(--dark-gray);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  flex: 0 0 auto; /* Don't allow cards to grow or shrink */
+}
+
+.title-card:hover {
+  background-color: rgba(93, 89, 217, 0.2); /* Lighter purple background on hover */
+  color: var(--dark-gray); /* Keep text color consistent */
+}
+
+.title-card.active {
+  background-color: var(--purple);
+  color: var(--white);
+}
+
+/* Add this to ensure proper spacing between title cards row and name input */
+.title-container {
+  margin-bottom: 0.75rem;
+}
+
+/* Update styles for displaying City and State inputs side by side */
+.city-state-container {
+  display: flex;
+  gap: 0.75rem; /* Gap between City and State inputs */
+  margin-bottom: 1rem; /* Same as regular inputs */
+  height: 42px; /* Match input height */
+}
+
+/* Ensure inputs inside container have no bottom margin */
+.city-state-container input {
+  margin-bottom: 0;
+}
+
+/* Make sure the country input follows the same spacing pattern */
+#country {
+  margin-bottom: 1rem; /* Consistent with other inputs */
+  height: 42px; /* Match other inputs */
+}
+
+/* Add styles for the new top header layout with search bar */
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.top-header h2 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.5rem;
+}
+
+/* Update search container and search bar styles */
+.search-container {
+  position: relative;
+  width: 300px;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2rem;
+  border: 1px solid var(--medium-gray);
+  border-radius: 25px; /* Full border radius */
+  font-size: 0.9rem;
+  height: 38px;
+  margin: 0; /* Override default margins */
+  background-color: var(--light-gray); /* Grey background */
+}
+
+.search-bar:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 2px rgba(93, 89, 217, 0.1);
+  background-color: var(--white); /* Change to white on focus */
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dark-gray);
+  pointer-events: none; /* Make sure icon doesn't interfere with input */
+}
+
+/* Add styles for the centered search container with glassmorphism */
+.search-container-centered {
+  position: relative;
+  width: 80%;
+  max-width: 500px;
+  margin: -2.5rem auto 1.5rem auto;
+  text-align: center;
+}
+
+.search-bar-glass {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 25px;
+  font-size: 0.9rem;
+  height: 38px;
+  margin: 0;
+  background-color: rgba(80, 80, 80, 0.15);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px); /* For Safari support */
+  color: var(--dark-gray);
+  position: relative; /* Ensure proper stacking context */
+  z-index: 1; /* Place below the icon */
+}
+
+.search-bar-glass::placeholder {
+  color: rgba(51, 51, 51, 0.7);
+}
+
+.search-bar-glass:focus {
+  border-color: rgba(93, 89, 217, 0.4);
+  background-color: rgba(80, 80, 80, 0.2); /* Slightly darker when focused */
+  outline: none;
+}
+
+/* Position the search icon for the centered search bar */
+.search-container-centered .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(51, 51, 51, 0.7); /* Slightly transparent dark gray */
+  pointer-events: none; /* Make sure icon doesn't interfere with input */
+  /* Add these properties to prevent blur effect from affecting the icon */
+  z-index: 2; /* Place icon above the search input */
+  backdrop-filter: none; /* Remove any backdrop filter effects */
+  -webkit-backdrop-filter: none; /* For Safari support */
+}
+
+/* Update responsive design for search positioning */
+@media (max-width: 992px) {
+  .search-container-centered {
+    margin-top: 0; /* Reset margin on smaller screens */
+    margin-bottom: 1rem;
+  }
 }
