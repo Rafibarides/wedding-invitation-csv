@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address to CSV Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="mt-3 mb-3 text-center">Wedding Address Collector</h2>
+        
+        <div class="split-layout">
+            <!-- Form Section (Left) -->
+            <div class="form-section">
+                <div class="card">
+                    <input type="text" id="name" placeholder="Full Name" required>
+                    <input type="text" id="address1" placeholder="Address Line 1" required>
+                    <input type="text" id="city" placeholder="City" required>
+                    <input type="text" id="state" placeholder="State" required>
+                    <input type="text" id="zip" placeholder="ZIP Code" required>
+                    <input type="text" id="country" placeholder="Country" required>
+                    
+                    <div class="mt-2">
+                        <button class="btn btn-primary" onclick="addEntry()">Add Entry</button>
+                        <button class="btn btn-secondary" onclick="downloadCSV()">Download CSV</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Table Section (Right) -->
+            <div class="table-section">
+                <div class="table-container">
+                    <table id="entriesTable" style="display:none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>City</th>
+                                <th>State</th>
+                                <th>ZIP</th>
+                                <th>Country</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const entries = [];
+        let currentEditingCell = null;
+        const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmCt00Bhv5To8gdTjGpfSPufnuVxzQVe-Sn01DC4EXEhK6Z19UyEtC88Vn8mi_zHM7JA/exec";
+
+        function addEntry() {
+            const name = document.getElementById('name').value.trim();
+            const address1 = document.getElementById('address1').value.trim();
+            const city = document.getElementById('city').value.trim();
+            const state = document.getElementById('state').value.trim();
+            const zip = document.getElementById('zip').value.trim();
+            const country = document.getElementById('country').value.trim();
+
+            if (!name || !address1 || !city || !state || !zip || !country) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const entry = { name, address1, city, state, zip, country };
+            
+            // Send data to Google Sheets
+            sendToGoogleSheets(entry);
+            
+            entries.push(entry);
+            updateTable();
+
+            // Clear fields
+            document.querySelectorAll('input').forEach(input => input.value = '');
+        }
+        
+        function sendToGoogleSheets(entry) {
+            // Create a loading indicator
+            const formSection = document.querySelector('.form-section');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = 'Saving to Google Sheets...';
+            loadingIndicator.style.color = 'var(--purple)';
+            loadingIndicator.style.marginTop = '1rem';
+            loadingIndicator.style.textAlign = 'center';
+            formSection.appendChild(loadingIndicator);
+            
+            // Use JSONP approach for CORS bypass
+            const script = document.createElement('script');
+            const callbackName = 'googleSheetsCallback_' + new Date().getTime();
+            
+            // Create global callback function
+            window[callbackName] = function(response) {
+                // Remove loading indicator
+                formSection.removeChild(loadingIndicator);
+                
+                // Show success message
+                const successMessage = document.createElement('div');
+                successMessage.className = 'success-message';
+                successMessage.textContent = 'Entry saved to Google Sheets!';
+                successMessage.style.color = 'green';
+                successMessage.style.marginTop = '1rem';
+                successMessage.style.textAlign = 'center';
+                formSection.appendChild(successMessage);
+                
+                // Remove success message after 3 seconds
+                setTimeout(() => {
+                    if (formSection.contains(successMessage)) {
+                        formSection.removeChild(successMessage);
+                    }
+                    // Clean up the global callback
+                    delete window[callbackName];
+                }, 3000);
+            };
+            
+            // Build URL with parameters
+            const url = new URL(SHEETS_ENDPOINT);
+            url.searchParams.append('name', entry.name);
+            url.searchParams.append('address1', entry.address1);
+            url.searchParams.append('city', entry.city);
+            url.searchParams.append('state', entry.state);
+            url.searchParams.append('zip', entry.zip);
+            url.searchParams.append('country', entry.country);
+            url.searchParams.append('callback', callbackName);
+            
+            // Set script source and add to document
+            script.src = url.toString();
+            document.body.appendChild(script);
+            
+            // Handle errors
+            script.onerror = function() {
+                // Remove loading indicator
+                formSection.removeChild(loadingIndicator);
+                
+                // Show error message
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'error-message';
+                errorMessage.textContent = 'Error saving to Google Sheets. Entry saved locally only.';
+                errorMessage.style.color = 'red';
+                errorMessage.style.marginTop = '1rem';
+                errorMessage.style.textAlign = 'center';
+                formSection.appendChild(errorMessage);
+                
+                // Remove error message after 3 seconds
+                setTimeout(() => {
+                    if (formSection.contains(errorMessage)) {
+                        formSection.removeChild(errorMessage);
+                    }
+                    // Clean up the global callback
+                    delete window[callbackName];
+                }, 3000);
+            };
+        }
+
+        function updateTable() {
+            const table = document.getElementById('entriesTable');
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            entries.forEach((e, index) => {
+                const row = document.createElement('tr');
+                
+                // Create cells for each field
+                const fields = ['name', 'address1', 'city', 'state', 'zip', 'country'];
+                fields.forEach(field => {
+                    const cell = document.createElement('td');
+                    cell.textContent = e[field];
+                    cell.dataset.field = field;
+                    cell.dataset.index = index;
+                    cell.addEventListener('dblclick', startEditing);
+                    row.appendChild(cell);
+                });
+                
+                tbody.appendChild(row);
+            });
+
+            table.style.display = 'table';
+        }
+
+        function startEditing(event) {
+            // If already editing, finish that first
+            if (currentEditingCell) {
+                finishEditing();
+            }
+            
+            const cell = event.target;
+            currentEditingCell = cell;
+            
+            const index = parseInt(cell.dataset.index);
+            const field = cell.dataset.field;
+            const value = entries[index][field];
+            
+            // Save original content in case of cancel
+            cell.dataset.originalContent = value;
+            
+            // Create input element
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = value;
+            input.className = 'edit-cell-input';
+            input.style.width = '100%';
+            input.style.padding = '0.25rem';
+            input.style.border = '1px solid var(--purple)';
+            input.style.borderRadius = '4px';
+            input.style.fontSize = '0.8125rem';
+            
+            // Clear cell and add input
+            cell.textContent = '';
+            cell.appendChild(input);
+            
+            // Focus input
+            input.focus();
+            
+            // Add event listeners
+            input.addEventListener('blur', finishEditing);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    finishEditing();
+                } else if (e.key === 'Escape') {
+                    cancelEditing();
+                }
+            });
+        }
+
+        function finishEditing() {
+            if (!currentEditingCell) return;
+            
+            const cell = currentEditingCell;
+            const input = cell.querySelector('input');
+            
+            if (!input) return;
+            
+            const index = parseInt(cell.dataset.index);
+            const field = cell.dataset.field;
+            const newValue = input.value.trim();
+            const oldValue = cell.dataset.originalContent;
+            
+            // Update data
+            entries[index][field] = newValue;
+            
+            // Update cell
+            cell.textContent = newValue;
+            
+            currentEditingCell = null;
+            
+            // If value changed, update in Google Sheets
+            if (newValue !== oldValue) {
+                updateGoogleSheets(entries[index]);
+            }
+        }
+        
+        function updateGoogleSheets(entry) {
+            // Create a loading indicator
+            const tableSection = document.querySelector('.table-section');
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = 'Updating Google Sheets...';
+            loadingIndicator.style.color = 'var(--purple)';
+            loadingIndicator.style.marginTop = '1rem';
+            loadingIndicator.style.textAlign = 'center';
+            tableSection.appendChild(loadingIndicator);
+            
+            // Prepare the data for Google Sheets
+            const formData = new FormData();
+            formData.append('name', entry.name);
+            formData.append('address1', entry.address1);
+            formData.append('city', entry.city);
+            formData.append('state', entry.state);
+            formData.append('zip', entry.zip);
+            formData.append('country', entry.country);
+            formData.append('action', 'update');
+            
+            // Send the data
+            fetch(SHEETS_ENDPOINT, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Remove loading indicator
+                tableSection.removeChild(loadingIndicator);
+            })
+            .catch(error => {
+                console.error('Error updating Google Sheets:', error);
+                
+                // Remove loading indicator
+                tableSection.removeChild(loadingIndicator);
+            });
+        }
+
+        function cancelEditing() {
+            if (!currentEditingCell) return;
+            
+            const cell = currentEditingCell;
+            const originalContent = cell.dataset.originalContent;
+            
+            // Restore original content
+            cell.textContent = originalContent;
+            
+            currentEditingCell = null;
+        }
+
+        function downloadCSV() {
+            if (entries.length === 0) {
+                alert('No entries to download.');
+                return;
+            }
+
+            // Finish any ongoing editing before download
+            if (currentEditingCell) {
+                finishEditing();
+            }
+
+            const headers = ['Name', 'Address Line 1', 'City', 'State', 'ZIP', 'Country'];
+            const rows = entries.map(e => [
+                e.name, e.address1, e.city, e.state, e.zip, e.country
+            ]);
+
+            let csvContent = headers.join(",") + "\n" +
+                rows.map(row => row.map(field => `"${field}"`).join(",")).join("\n");
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "wedding_addresses.csv");
+            link.style.display = "none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Add click handler to document to finish editing when clicking outside
+        document.addEventListener('click', function(event) {
+            if (currentEditingCell && !currentEditingCell.contains(event.target)) {
+                finishEditing();
+            }
+        });
+    </script>
+</body>
+</html>
