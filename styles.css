@@ -449,3 +449,49 @@ table tr:hover td {
   display: grid;
   grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr 1fr 50px;
 }
+
+/* Add styles for the PIN overlay */
+.pin-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--light-gray);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.pin-container {
+  background-color: var(--white);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+}
+
+.pin-container h2 {
+  margin-bottom: 1.5rem;
+  color: var(--purple);
+}
+
+.pin-container input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--medium-gray);
+  border-radius: 8px;
+  font-size: 1.25rem;
+  text-align: center;
+  letter-spacing: 0.25rem;
+}
+
+.pin-error {
+  color: #ff4d4d;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}

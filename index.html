@@ -9,6 +9,16 @@
     <link rel="icon" href="favicon.png" type="image/png">
 </head>
 <body>
+    <!-- Add PIN overlay at the beginning of the body -->
+    <div id="pinOverlay" class="pin-overlay">
+        <div class="pin-container">
+            <h2>Enter PIN to Access</h2>
+            <input type="password" id="pinInput" placeholder="Enter PIN" maxlength="4">
+            <button class="btn btn-primary" onclick="checkPin()">Submit</button>
+            <p id="pinError" class="pin-error"></p>
+        </div>
+    </div>
+
     <div class="container">
         <h2 class="mt-3 mb-3 text-center">Wedding Address Collector</h2>
         
@@ -84,11 +94,58 @@
     </div>
 
     <script>
+        // PIN protection
+        const CORRECT_PIN = "1234"; // You can change this to any PIN you want
+        const PIN_STORAGE_KEY = "weddingAddressPinVerified";
+        
+        // Check if user has already verified PIN in this browser
+        function checkPinVerification() {
+            const isPinVerified = localStorage.getItem(PIN_STORAGE_KEY);
+            if (isPinVerified === "true") {
+                document.getElementById("pinOverlay").style.display = "none";
+            }
+        }
+        
+        // Verify PIN when submitted
+        function checkPin() {
+            const pinInput = document.getElementById("pinInput").value;
+            const pinError = document.getElementById("pinError");
+            
+            if (pinInput === CORRECT_PIN) {
+                // Store verification in localStorage
+                localStorage.setItem(PIN_STORAGE_KEY, "true");
+                // Hide the overlay
+                document.getElementById("pinOverlay").style.display = "none";
+                // Clear the input
+                document.getElementById("pinInput").value = "";
+                pinError.textContent = "";
+            } else {
+                // Show error message
+                pinError.textContent = "Incorrect PIN. Please try again.";
+                // Clear the input
+                document.getElementById("pinInput").value = "";
+            }
+        }
+        
+        // Add event listener for Enter key on PIN input
+        document.addEventListener('DOMContentLoaded', function() {
+            const pinInput = document.getElementById("pinInput");
+            pinInput.addEventListener("keyup", function(event) {
+                if (event.key === "Enter") {
+                    checkPin();
+                }
+            });
+            
+            // Check if PIN is already verified
+            checkPinVerification();
+        });
+
         let entries = [];
         let currentEditingCell = null;
-        const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwiHj1DGbNIsXQ-7YNSyPO3iBPE5FEaoggu26oekm6kDhiSsJmrlW9eTQkeghM7iB_q7A/exec";
+        const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycby7BMreNDJl7LXnutIXxe_ymGBtW9K5O7MlKTofaui0b3BcoQTQnt6nfmXd4FZ_CEMyhg/exec";
         const LOCAL_STORAGE_KEY = "weddingAddressEntries";
         const LAST_SYNC_KEY = "lastSheetsSync";
+        const FILTER_STORAGE_KEY = "weddingAddressFilter";
 
         // Load entries when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -97,6 +154,9 @@
             
             // Then fetch from Google Sheets to get the latest data
             fetchEntriesFromGoogleSheets();
+            
+            // Restore filter selection
+            restoreFilterSelection();
         });
 
         function loadEntriesFromLocalStorage() {
@@ -247,7 +307,7 @@
             iframe.name = 'hidden_iframe_' + Date.now(); // Give it a unique name
             document.body.appendChild(iframe);
             
-            // Create a form inside the iframe document
+            // Create a form
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = SHEETS_ENDPOINT;
@@ -369,12 +429,12 @@
                     tableSection.removeChild(loadingIndicator);
                 }
                 
+                // Show success message
+                showMessage(tableSection, 'Entry updated in Google Sheets!', 'green');
+                
                 // Clean up
                 if (document.body.contains(iframe)) {
                     document.body.removeChild(iframe);
-                }
-                if (document.body.contains(form)) {
-                    document.body.removeChild(form);
                 }
             }, 5000);
             
@@ -387,12 +447,12 @@
                     tableSection.removeChild(loadingIndicator);
                 }
                 
+                // Show success message
+                showMessage(tableSection, 'Entry updated in Google Sheets!', 'green');
+                
                 // Clean up
                 if (document.body.contains(iframe)) {
                     document.body.removeChild(iframe);
-                }
-                if (document.body.contains(form)) {
-                    document.body.removeChild(form);
                 }
             };
             
@@ -627,6 +687,7 @@
             addField('state', entry.state);
             addField('zip', entry.zip);
             addField('country', entry.country);
+            addField('relation', entry.relation);
             addField('action', 'delete');
             
             // Add form to document body and submit
@@ -697,6 +758,7 @@
 
         // Add the applyFilter function
         function applyFilter() {
+            saveFilterSelection();
             updateTable();
         }
 
@@ -726,6 +788,21 @@
                 });
             });
         });
+
+        // Save filter selection to localStorage
+        function saveFilterSelection() {
+            const filterValue = document.getElementById('relationFilter').value;
+            localStorage.setItem(FILTER_STORAGE_KEY, filterValue);
+        }
+
+        // Restore filter selection from localStorage
+        function restoreFilterSelection() {
+            const savedFilter = localStorage.getItem(FILTER_STORAGE_KEY);
+            if (savedFilter) {
+                document.getElementById('relationFilter').value = savedFilter;
+                applyFilter(); // Apply the filter immediately
+            }
+        }
     </script>
 </body>
 </html>
