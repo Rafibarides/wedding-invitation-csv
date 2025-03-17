@@ -20,7 +20,7 @@
     </div>
 
     <div class="container">
-        <h2 class="mt-3 mb-3 text-center">Wedding Address Collector</h2>
+        <h2 class="mt-3 mb-3">Wedding Invitations</h2>
         
         <div class="split-layout">
             <!-- Form Section (Left) -->
@@ -54,7 +54,7 @@
                         </div>
                     </div>
                     
-                    <div class="mt-2">
+                    <div class="mt-2 button-container">
                         <button class="btn btn-primary" onclick="addEntry()">Add Entry</button>
                         <button class="btn btn-secondary" onclick="downloadCSV()">Download CSV</button>
                     </div>
@@ -71,6 +71,9 @@
                         <option value="Extended Family">Extended Family</option>
                         <option value="Neighbor">Neighbor</option>
                     </select>
+                    <button id="syncButton" class="btn-icon" onclick="fetchEntriesFromGoogleSheets()">
+                        <i class="fas fa-sync-alt"></i> Sync
+                    </button>
                 </div>
                 <div class="table-container">
                     <table id="entriesTable" style="display:none;">
@@ -82,7 +85,7 @@
                                 <th>State</th>
                                 <th>ZIP</th>
                                 <th>Country</th>
-                                <th>Relation</th>
+                                <th></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -90,6 +93,16 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="envelopeModal" class="envelope-modal" style="display: none;">
+        <div class="envelope-container">
+            <img src="envelope.png" alt="Envelope" class="envelope-img">
+            <div id="addressOverlay" class="address-overlay"></div>
+            <button class="close-modal" onclick="closeEnvelopePreview()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     </div>
 
@@ -230,35 +243,6 @@
                     showMessage(tableSection, errorMessage, '#ff4d4d');
                 });
         }
-
-        // Add a refresh button to manually sync with Google Sheets
-        function addRefreshButton() {
-            const tableContainer = document.querySelector('.table-container');
-            const refreshContainer = document.createElement('div');
-            refreshContainer.style.textAlign = 'right';
-            refreshContainer.style.marginBottom = '0.5rem';
-            
-            const refreshButton = document.createElement('button');
-            refreshButton.className = 'btn-icon';
-            refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sync';
-            refreshButton.style.fontSize = '0.75rem';
-            refreshButton.style.padding = '0.25rem 0.5rem';
-            refreshButton.style.backgroundColor = 'var(--purple)';
-            refreshButton.style.color = 'white';
-            refreshButton.style.border = 'none';
-            refreshButton.style.borderRadius = '4px';
-            refreshButton.style.cursor = 'pointer';
-            
-            refreshButton.addEventListener('click', fetchEntriesFromGoogleSheets);
-            
-            refreshContainer.appendChild(refreshButton);
-            tableContainer.parentNode.insertBefore(refreshContainer, tableContainer);
-        }
-
-        // Call this function when the DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            addRefreshButton();
-        });
 
         function addEntry() {
             const name = document.getElementById('name').value.trim();
@@ -465,56 +449,85 @@
             const tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
             
-            // Get current filter value
+            // Get filter value
             const filterValue = document.getElementById('relationFilter').value;
             
-            // Filter entries based on selection
+            // Filter entries based on relation
             const filteredEntries = filterValue === 'all' 
                 ? entries 
                 : entries.filter(entry => entry.relation === filterValue);
             
             if (filteredEntries.length > 0) {
                 filteredEntries.forEach((entry, index) => {
-                    const tr = document.createElement('tr');
+                    const row = document.createElement('tr');
                     
-                    // Find the original index in the entries array
-                    const originalIndex = entries.findIndex(e => 
-                        e.name === entry.name && 
-                        e.address1 === entry.address1 && 
-                        e.city === entry.city);
+                    // Create cells for each property except relation
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = entry.name;
+                    nameCell.dataset.field = 'name';
+                    nameCell.dataset.index = index;
+                    nameCell.addEventListener('dblclick', startEditing);
                     
-                    // Create cells for each field
-                    const createCell = (field, value) => {
-                        const td = document.createElement('td');
-                        td.textContent = value;
-                        td.dataset.index = originalIndex;
-                        td.dataset.field = field;
-                        td.addEventListener('click', startEditing);
-                        return td;
-                    };
+                    const addressCell = document.createElement('td');
+                    addressCell.textContent = entry.address1;
+                    addressCell.dataset.field = 'address1';
+                    addressCell.dataset.index = index;
+                    addressCell.addEventListener('dblclick', startEditing);
                     
-                    tr.appendChild(createCell('name', entry.name));
-                    tr.appendChild(createCell('address1', entry.address1));
-                    tr.appendChild(createCell('city', entry.city));
-                    tr.appendChild(createCell('state', entry.state));
-                    tr.appendChild(createCell('zip', entry.zip));
-                    tr.appendChild(createCell('country', entry.country));
-                    tr.appendChild(createCell('relation', entry.relation));
+                    const cityCell = document.createElement('td');
+                    cityCell.textContent = entry.city;
+                    cityCell.dataset.field = 'city';
+                    cityCell.dataset.index = index;
+                    cityCell.addEventListener('dblclick', startEditing);
                     
-                    // Add delete button
+                    const stateCell = document.createElement('td');
+                    stateCell.textContent = entry.state;
+                    stateCell.dataset.field = 'state';
+                    stateCell.dataset.index = index;
+                    stateCell.addEventListener('dblclick', startEditing);
+                    
+                    const zipCell = document.createElement('td');
+                    zipCell.textContent = entry.zip;
+                    zipCell.dataset.field = 'zip';
+                    zipCell.dataset.index = index;
+                    zipCell.addEventListener('dblclick', startEditing);
+                    
+                    const countryCell = document.createElement('td');
+                    countryCell.textContent = entry.country;
+                    countryCell.dataset.field = 'country';
+                    countryCell.dataset.index = index;
+                    countryCell.addEventListener('dblclick', startEditing);
+                    
+                    // Create preview button
+                    const previewCell = document.createElement('td');
+                    const previewBtn = document.createElement('button');
+                    previewBtn.className = 'preview-btn';
+                    previewBtn.innerHTML = '<i class="fas fa-envelope"></i>';
+                    previewBtn.addEventListener('click', () => showEnvelopePreview(entry));
+                    previewCell.appendChild(previewBtn);
+                    
+                    // Create delete button
                     const deleteCell = document.createElement('td');
-                    deleteCell.className = 'delete-cell';
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-btn';
-                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                    deleteBtn.addEventListener('click', () => deleteEntry(originalIndex));
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.addEventListener('click', () => deleteEntry(index));
                     deleteCell.appendChild(deleteBtn);
-                    tr.appendChild(deleteCell);
                     
-                    tbody.appendChild(tr);
+                    // Add all cells to row
+                    row.appendChild(nameCell);
+                    row.appendChild(addressCell);
+                    row.appendChild(cityCell);
+                    row.appendChild(stateCell);
+                    row.appendChild(zipCell);
+                    row.appendChild(countryCell);
+                    row.appendChild(previewCell);
+                    row.appendChild(deleteCell);
+                    
+                    tbody.appendChild(row);
                 });
                 
-                table.style.display = 'table';
+                table.style.display = 'block';
             } else {
                 table.style.display = 'none';
             }
@@ -802,6 +815,29 @@
                 document.getElementById('relationFilter').value = savedFilter;
                 applyFilter(); // Apply the filter immediately
             }
+        }
+
+        // Add these functions for the envelope preview
+        function showEnvelopePreview(entry) {
+            const modal = document.getElementById('envelopeModal');
+            const addressOverlay = document.getElementById('addressOverlay');
+            
+            // Format the address with line breaks
+            const formattedAddress = `${entry.name}\n${entry.address1}\n${entry.city}, ${entry.state} ${entry.zip}\n${entry.country}`;
+            
+            addressOverlay.textContent = formattedAddress;
+            modal.style.display = 'flex';
+            
+            // Add event listener to close when clicking outside
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    closeEnvelopePreview();
+                }
+            });
+        }
+
+        function closeEnvelopePreview() {
+            document.getElementById('envelopeModal').style.display = 'none';
         }
     </script>
 </body>
