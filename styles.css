@@ -887,3 +887,50 @@ table tr:hover td {
 .detail-modal .close-modal i {
   font-size: 0.8rem; /* Smaller icon */
 }
+
+/* Update PIN overlay styles for better security */
+.pin-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--white);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* Higher than any other element */
+}
+
+.pin-container {
+  background-color: var(--white);
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.pin-container h2 {
+  color: var(--purple);
+  margin-bottom: 1.5rem;
+}
+
+.pin-container input {
+  text-align: center;
+  letter-spacing: 0.25rem;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.pin-error {
+  color: #ff4d4d;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Style for the app content container */
+.app-content {
+  min-height: 100vh;
+}

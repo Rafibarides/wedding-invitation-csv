@@ -9,7 +9,7 @@
     <link rel="icon" href="favicon.png" type="image/png">
 </head>
 <body>
-    <!-- Add PIN overlay at the beginning of the body -->
+    <!-- Update the PIN overlay to use a proper hiding mechanism -->
     <div id="pinOverlay" class="pin-overlay">
         <div class="pin-container">
             <h2>Enter PIN to Access</h2>
@@ -19,132 +19,136 @@
         </div>
     </div>
 
-    <div class="container">
-        <div class="top-header">
-            <h2 class="mt-3 mb-3">Wedding Invitations</h2>
-        </div>
-        
-        <div class="split-layout">
-            <!-- Form Section (Left) -->
-            <div class="form-section">
-                <div class="card">
-                    <!-- Add title button cards -->
-                    <div class="title-container">
-                        <div class="title-cards">
-                            <div class="title-card" data-value="Rabbi and Mrs. ">
-                                <span>Rabbi and Mrs.</span>
-                            </div>
-                            <div class="title-card" data-value="Mr. and Mrs. ">
-                                <span>Mr. and Mrs.</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <input type="text" id="name" placeholder="Full Name" required>
-                    <input type="text" id="address1" placeholder="Address Line 1" required>
-                    <input type="text" id="zip" placeholder="ZIP Code" required>
-                    <!-- Begin new container for city and state inputs -->
-                    <div class="city-state-container">
-                        <input type="text" id="city" placeholder="City" required>
-                        <input type="text" id="state" placeholder="State" required>
-                    </div>
-                    <!-- End new container -->
-                    <input type="text" id="country" placeholder="Country" value="United States" required>
-                    
-                    <div class="relation-container">
-                        <div class="relation-cards">
-                            <div class="relation-card" data-value="Friend">
-                                <input type="radio" name="relation" value="Friend" checked hidden>
-                                <span>Friend</span>
-                            </div>
-                            <div class="relation-card" data-value="Co-worker">
-                                <input type="radio" name="relation" value="Co-worker" hidden>
-                                <span>Co-worker</span>
-                            </div>
-                            <div class="relation-card" data-value="Extended Family">
-                                <input type="radio" name="relation" value="Extended Family" hidden>
-                                <span>Extended Family</span>
-                            </div>
-                            <div class="relation-card" data-value="Neighbor">
-                                <input type="radio" name="relation" value="Neighbor" hidden>
-                                <span>Neighbor</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-2 button-container">
-                        <button class="btn btn-primary" onclick="addEntry()">Add Entry</button>
-                        <button class="btn btn-secondary" onclick="downloadCSV()">Download CSV</button>
-                    </div>
-                </div>
+    <!-- Wrap all content in a container that's initially hidden -->
+    <div id="appContent" class="app-content" style="display: none;">
+        <div class="container">
+            <div class="top-header">
+                <h2 class="mt-3 mb-3">Wedding Invitations</h2>
             </div>
             
-            <!-- Table Section (Right) -->
-            <div class="table-section">
-                <!-- Add the search bar above the table but below the header -->
-                <div class="search-container-centered">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="searchInput" placeholder="Search names, addresses..." class="search-bar-glass">
-                    <div id="guestCounter" class="guest-counter">0 Total Guests</div>
+            <div class="split-layout">
+                <!-- Form Section (Left) -->
+                <div class="form-section">
+                    <div class="card">
+                        <!-- Add title button cards -->
+                        <div class="title-container">
+                            <div class="title-cards">
+                                <div class="title-card" data-value="Rabbi and Mrs. ">
+                                    <span>Rabbi and Mrs.</span>
+                                </div>
+                                <div class="title-card" data-value="Mr. and Mrs. ">
+                                    <span>Mr. and Mrs.</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <input type="text" id="name" placeholder="Full Name" required>
+                        <input type="text" id="address1" placeholder="Address Line 1" required>
+                        <input type="text" id="zip" placeholder="ZIP Code" required>
+                        <!-- Begin new container for city and state inputs -->
+                        <div class="city-state-container">
+                            <input type="text" id="city" placeholder="City" required>
+                            <input type="text" id="state" placeholder="State" required>
+                        </div>
+                        <!-- End new container -->
+                        <input type="text" id="country" placeholder="Country" value="United States" required>
+                        
+                        <div class="relation-container">
+                            <div class="relation-cards">
+                                <div class="relation-card" data-value="Friend">
+                                    <input type="radio" name="relation" value="Friend" checked hidden>
+                                    <span>Friend</span>
+                                </div>
+                                <div class="relation-card" data-value="Co-worker">
+                                    <input type="radio" name="relation" value="Co-worker" hidden>
+                                    <span>Co-worker</span>
+                                </div>
+                                <div class="relation-card" data-value="Extended Family">
+                                    <input type="radio" name="relation" value="Extended Family" hidden>
+                                    <span>Extended Family</span>
+                                </div>
+                                <div class="relation-card" data-value="Neighbor">
+                                    <input type="radio" name="relation" value="Neighbor" hidden>
+                                    <span>Neighbor</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 button-container">
+                            <button class="btn btn-primary" onclick="addEntry()">Add Entry</button>
+                            <button class="btn btn-secondary" onclick="downloadCSV()">Download CSV</button>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="filter-container">
-                    <select id="relationFilter" onchange="applyFilter()">
-                        <option value="all">All Relations</option>
-                        <option value="Friend">Friend</option>
-                        <option value="Co-worker">Co-worker</option>
-                        <option value="Extended Family">Extended Family</option>
-                        <option value="Neighbor">Neighbor</option>
-                    </select>
-                    <button id="syncButton" class="btn-icon" onclick="fetchEntriesFromGoogleSheets()">
-                        <i class="fas fa-sync-alt"></i> Sync
-                    </button>
-                </div>
-                <div class="table-container">
-                    <table id="entriesTable" style="display:none;">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Address</th>
-                                <th>City</th>
-                                <th>State</th>
-                                <th>ZIP</th>
-                                <th>Country</th>
-                                <th></th>
-                                <th></th>
-                            </tr>
-                            
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <!-- Table Section (Right) -->
+                <div class="table-section">
+                    <!-- Add the search bar above the table but below the header -->
+                    <div class="search-container-centered">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="Search names, addresses..." class="search-bar-glass">
+                        <div id="guestCounter" class="guest-counter">0 Total Guests</div>
+                    </div>
+                    
+                    <div class="filter-container">
+                        <select id="relationFilter" onchange="applyFilter()">
+                            <option value="all">All Relations</option>
+                            <option value="Friend">Friend</option>
+                            <option value="Co-worker">Co-worker</option>
+                            <option value="Extended Family">Extended Family</option>
+                            <option value="Neighbor">Neighbor</option>
+                        </select>
+                        <button id="syncButton" class="btn-icon" onclick="fetchEntriesFromGoogleSheets()">
+                            <i class="fas fa-sync-alt"></i> Sync
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="entriesTable" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Address</th>
+                                    <th>City</th>
+                                    <th>State</th>
+                                    <th>ZIP</th>
+                                    <th>Country</th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                                
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <div id="envelopeModal" class="envelope-modal" style="display: none;">
-        <div class="envelope-container">
-            <img src="envelope.png" alt="Envelope" class="envelope-img">
-            <div id="addressOverlay" class="address-overlay"></div>
-            <button class="close-modal" onclick="closeEnvelopePreview()">
-                <i class="fas fa-times"></i>
-            </button>
+        
+        <!-- Envelope Modal -->
+        <div id="envelopeModal" class="envelope-modal" style="display: none;">
+            <div class="envelope-container">
+                <img src="envelope.png" alt="Envelope" class="envelope-img">
+                <div id="addressOverlay" class="address-overlay"></div>
+                <button class="close-modal" onclick="closeEnvelopePreview()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
-    </div>
-
-    <!-- Add this after your envelope modal -->
-    <div id="detailModal" class="detail-modal" style="display: none;">
-        <div class="detail-container">
-            <h3 id="modalTitle">Entry Details</h3>
-            <div id="detailContent" class="detail-content">
-                <!-- Content will be dynamically populated -->
+        
+        <!-- Detail Modal -->
+        <div id="detailModal" class="detail-modal" style="display: none;">
+            <div class="detail-container">
+                <h3 id="modalTitle">Entry Details</h3>
+                <div id="detailContent" class="detail-content">
+                    <!-- Content will be dynamically populated -->
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-accent" onclick="closeDetailModal()">Close</button>
+                </div>
+                <button class="close-modal" onclick="closeDetailModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-actions">
-                <button class="btn btn-accent" onclick="closeDetailModal()">Close</button>
-            </div>
-            <button class="close-modal" onclick="closeDetailModal()">
-                <i class="fas fa-times"></i>
-            </button>
         </div>
     </div>
 
@@ -157,7 +161,13 @@
         function checkPinVerification() {
             const isPinVerified = localStorage.getItem(PIN_STORAGE_KEY);
             if (isPinVerified === "true") {
+                // Show the application content
                 document.getElementById("pinOverlay").style.display = "none";
+                document.getElementById("appContent").style.display = "block";
+            } else {
+                // Keep the app content hidden
+                document.getElementById("pinOverlay").style.display = "flex";
+                document.getElementById("appContent").style.display = "none";
             }
         }
         
@@ -169,8 +179,9 @@
             if (pinInput === CORRECT_PIN) {
                 // Store verification in localStorage
                 localStorage.setItem(PIN_STORAGE_KEY, "true");
-                // Hide the overlay
+                // Hide the overlay and show the app content
                 document.getElementById("pinOverlay").style.display = "none";
+                document.getElementById("appContent").style.display = "block";
                 // Clear the input
                 document.getElementById("pinInput").value = "";
                 pinError.textContent = "";
