@@ -298,13 +298,6 @@ table tr:hover td {
   overflow-y: auto;
   overflow-x: hidden;
   border-radius: 12px;
-  width: 100%;
-}
-
-/* Ensure the table itself has a consistent width */
-#entriesTable {
-  width: 100%;
-  table-layout: fixed;
 }
 
 /* Responsive adjustments */
@@ -368,11 +361,13 @@ table tr:hover td {
 
 /* Make sure the table header has the delete column */
 .table-section table thead tr {
-  display: table-row; /* Changed from grid */
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr 40px 40px;
 }
 
 .table-section table tbody tr {
-  display: table-row; /* Changed from grid */
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr 40px 40px;
 }
 
 /* Add this to your CSS file to make the title smaller */
@@ -448,7 +443,7 @@ table tr:hover td {
 }
 
 /* Update sync button styling with full border radius */
-#syncButton, #privacyButton {
+#syncButton, #privacyToggleButton {
   height: 32px;
   padding: 0 0.75rem;
   background-color: var(--purple);
@@ -465,7 +460,7 @@ table tr:hover td {
   white-space: nowrap;
 }
 
-#syncButton:hover, #privacyButton:hover {
+#syncButton:hover, #privacyToggleButton:hover {
   background-color: var(--pink-dark);
 }
 
@@ -938,4 +933,108 @@ table tr:hover td {
 /* Style for the app content container */
 .app-content {
   min-height: 100vh;
+}
+
+/* Update the grid template columns for normal mode */
+.table-section table thead tr,
+.table-section table tbody tr {
+  display: grid;
+  grid-template-columns: 3fr 1.5fr 1fr 0.5fr 0.7fr 1fr 40px 40px;
+}
+
+/* Update privacy mode styling to ensure proper display */
+.privacy-mode-active thead tr th:not(:first-child),
+.privacy-mode-active tbody tr td:not(:first-child) {
+  display: none !important;
+}
+
+.privacy-mode-active thead tr th:first-child,
+.privacy-mode-active tbody tr td:first-child {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.privacy-mode-active thead tr,
+.privacy-mode-active tbody tr {
+  display: grid;
+  grid-template-columns: 1fr !important;
+}
+
+/* Privacy mode adjustments for action buttons */
+.privacy-mode-active .preview-cell,
+.privacy-mode-active .delete-cell {
+  display: block !important;
+}
+
+.privacy-mode-active tbody tr {
+  display: grid;
+  grid-template-columns: 1fr auto auto !important;
+}
+
+.privacy-mode-active thead tr {
+  display: grid;
+  grid-template-columns: 1fr 40px 40px !important;
+}
+
+/* Make the privacy mode header span the full width of the table */
+.privacy-mode-active thead tr th:first-child {
+  grid-column: 1 / -1;
+  width: 100%;
+  background-color: var(--purple);
+  color: var(--white);
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px 12px 0 0;
+}
+
+/* Make sure the table has display:table in both normal and privacy mode */
+#entriesTable {
+  display: table;
+  width: 100%;
+}
+
+/* Ensure the privacy mode table spans full width */
+.privacy-mode-active {
+  width: 100%;
+}
+
+/* Fix the display of table elements in privacy mode */
+.privacy-mode-active thead,
+.privacy-mode-active tbody,
+.privacy-mode-active tr {
+  display: block;
+  width: 100%;
+}
+
+.privacy-mode-active tbody tr td:first-child {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border-bottom: 1px solid var(--medium-gray);
+  padding: 0.5rem 0.75rem;
+}
+
+/* Override any previous styles */
+.privacy-mode-active table {
+  display: table !important;
+  width: 100% !important;
+}
+
+/* Style adjustments for the action buttons in privacy mode */
+.privacy-mode-active .preview-cell,
+.privacy-mode-active .delete-cell {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  display: inline-block !important;
+}
+
+.privacy-mode-active .delete-cell {
+  right: 55px;
+}
+
+.privacy-mode-active tbody tr {
+  position: relative;
 }
