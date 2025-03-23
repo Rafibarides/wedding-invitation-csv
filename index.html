@@ -1154,13 +1154,16 @@
                     // Create a new row
                     const row = document.createElement('tr');
                     
+                    // Get the actual index in the main entries array
+                    const mainIndex = entries.findIndex(e => e === entry);
+                    
                     // Create the name cell (the only one needed in privacy mode)
                     const nameCell = document.createElement('td');
                     nameCell.textContent = entry.name;
                     nameCell.dataset.field = 'name';
-                    nameCell.dataset.index = index;
+                    nameCell.dataset.index = mainIndex; // Use mainIndex instead of filtered index
                     nameCell.addEventListener('dblclick', startEditing);
-                    nameCell.addEventListener('click', function() { showDetailModal(index); });
+                    nameCell.addEventListener('click', function() { showDetailModal(mainIndex); }); // Use mainIndex here
                     
                     if (privacyModeEnabled) {
                         // In privacy mode, only add the name cell (which our CSS will force to span full width)
@@ -1170,31 +1173,31 @@
                         const addressCell = document.createElement('td');
                         addressCell.textContent = entry.address1;
                         addressCell.dataset.field = 'address1';
-                        addressCell.dataset.index = index;
+                        addressCell.dataset.index = mainIndex; // Use mainIndex here
                         addressCell.addEventListener('dblclick', startEditing);
                         
                         const cityCell = document.createElement('td');
                         cityCell.textContent = entry.city;
                         cityCell.dataset.field = 'city';
-                        cityCell.dataset.index = index;
+                        cityCell.dataset.index = mainIndex; // Use mainIndex here
                         cityCell.addEventListener('dblclick', startEditing);
                         
                         const stateCell = document.createElement('td');
                         stateCell.textContent = entry.state;
                         stateCell.dataset.field = 'state';
-                        stateCell.dataset.index = index;
+                        stateCell.dataset.index = mainIndex; // Use mainIndex here
                         stateCell.addEventListener('dblclick', startEditing);
                         
                         const zipCell = document.createElement('td');
                         zipCell.textContent = entry.zip;
                         zipCell.dataset.field = 'zip';
-                        zipCell.dataset.index = index;
+                        zipCell.dataset.index = mainIndex; // Use mainIndex here
                         zipCell.addEventListener('dblclick', startEditing);
                         
                         const countryCell = document.createElement('td');
                         countryCell.textContent = entry.country;
                         countryCell.dataset.field = 'country';
-                        countryCell.dataset.index = index;
+                        countryCell.dataset.index = mainIndex; // Use mainIndex here
                         countryCell.addEventListener('dblclick', startEditing);
                         
                         // Create preview button cell
@@ -1210,7 +1213,7 @@
                         const deleteBtn = document.createElement('button');
                         deleteBtn.className = 'delete-btn';
                         deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                        deleteBtn.addEventListener('click', () => deleteEntry(index));
+                        deleteBtn.addEventListener('click', () => deleteEntry(mainIndex)); // Use mainIndex here
                         deleteCell.appendChild(deleteBtn);
                         
                         // Append all cells in order
