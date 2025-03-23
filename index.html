@@ -612,6 +612,7 @@
                 nameCell.dataset.field = 'name';
                 nameCell.dataset.index = index;
                 nameCell.addEventListener('dblclick', function() { startEditingCell(this); });
+                nameCell.addEventListener('click', function() { showDetailModal(index); });
                 
                 if (privacyModeEnabled) {
                     nameCell.colSpan = 8; // Span across all 8 columns (full width)
@@ -1159,6 +1160,7 @@
                     nameCell.dataset.field = 'name';
                     nameCell.dataset.index = index;
                     nameCell.addEventListener('dblclick', startEditing);
+                    nameCell.addEventListener('click', function() { showDetailModal(index); });
                     
                     if (privacyModeEnabled) {
                         // In privacy mode, only add the name cell (which our CSS will force to span full width)
