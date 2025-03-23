@@ -99,7 +99,10 @@
                             <option value="Neighbor">Neighbor</option>
                         </select>
                         <button id="syncButton" class="btn-icon" onclick="fetchEntriesFromGoogleSheets()">
-                            <i class="fas fa-sync-alt"></i> Sync
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button id="privacyButton" class="btn-icon" onclick="togglePrivacyMode()">
+                            <i class="fas fa-eye"></i>
                         </button>
                     </div>
                     <div class="table-container">
@@ -111,7 +114,6 @@
                                     <th>City</th>
                                     <th>State</th>
                                     <th>ZIP</th>
-                                    <th>Country</th>
                                     <th></th>
                                     <th></th>
                                 </tr>
@@ -236,8 +238,33 @@
         const LOCAL_STORAGE_KEY = "weddingAddressEntries";
         const LAST_SYNC_KEY = "lastSheetsSync";
         const FILTER_STORAGE_KEY = "weddingAddressFilter";
+        const PRIVACY_MODE_KEY = "weddingAddressPrivacyMode";
 
-        // Add setupSearch() to your DOMContentLoaded event
+        // Add privacy mode variable
+        let privacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
+
+        // Function to toggle privacy mode
+        function togglePrivacyMode() {
+            const privacyButton = document.getElementById('privacyButton');
+            privacyMode = !privacyMode;
+            
+            // Save privacy mode to local storage
+            localStorage.setItem(PRIVACY_MODE_KEY, privacyMode);
+            
+            // Update button icon
+            if (privacyMode) {
+                privacyButton.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                document.getElementById('entriesTable').classList.add('privacy-mode');
+            } else {
+                privacyButton.innerHTML = '<i class="fas fa-eye"></i>';
+                document.getElementById('entriesTable').classList.remove('privacy-mode');
+            }
+            
+            // Update the table display
+            updateTable();
+        }
+
+        // Initialize privacy mode on page load
         document.addEventListener('DOMContentLoaded', function() {
             // First load from localStorage for immediate display
             loadEntriesFromLocalStorage();
@@ -277,7 +304,22 @@
                     radio.checked = true;
                 });
             });
+            
+            // Check and set privacy mode
+            initializePrivacyMode();
         });
+
+        // Initialize privacy mode on load
+        function initializePrivacyMode() {
+            const privacyButton = document.getElementById('privacyButton');
+            if (privacyMode) {
+                privacyButton.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                document.getElementById('entriesTable').classList.add('privacy-mode');
+            } else {
+                privacyButton.innerHTML = '<i class="fas fa-eye"></i>';
+                document.getElementById('entriesTable').classList.remove('privacy-mode');
+            }
+        }
 
         function loadEntriesFromLocalStorage() {
             const savedEntries = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -572,6 +614,10 @@
             const tbody = table.querySelector('tbody');
             tbody.innerHTML = '';
             
+            // Set consistent table width
+            table.style.width = '100%';
+            table.style.tableLayout = 'fixed';
+            
             // Get filter value
             const filterValue = document.getElementById('relationFilter').value;
             
@@ -580,17 +626,59 @@
                 ? entries 
                 : entries.filter(entry => entry.relation === filterValue);
             
+            // First, update table headers based on privacy mode
+            const thead = table.querySelector('thead');
+            thead.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            
+            // Always add Name column
+            const nameHeader = document.createElement('th');
+            nameHeader.textContent = 'Name';
+            // Set a consistent width for the name column
+            nameHeader.style.width = privacyMode ? 'calc(100% - 80px)' : '30%';
+            headerRow.appendChild(nameHeader);
+            
+            // Only add address columns when not in privacy mode
+            if (!privacyMode) {
+                // Removed Country from the addressHeaders array
+                const addressHeaders = ['Address', 'City', 'State', 'ZIP'];
+                const widths = ['25%', '20%', '10%', '15%']; // Set fixed percentages for each column
+                
+                addressHeaders.forEach((header, i) => {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    th.style.width = widths[i];
+                    headerRow.appendChild(th);
+                });
+            }
+            
+            // Add empty headers for action buttons (envelope and trash)
+            const previewHeader = document.createElement('th');
+            previewHeader.style.width = '40px';
+            previewHeader.style.minWidth = '40px';
+            previewHeader.style.position = 'sticky';
+            previewHeader.style.right = '40px';
+            headerRow.appendChild(previewHeader);
+            
+            const deleteHeader = document.createElement('th');
+            deleteHeader.style.width = '40px';
+            deleteHeader.style.minWidth = '40px';
+            deleteHeader.style.position = 'sticky';
+            deleteHeader.style.right = '0';
+            headerRow.appendChild(deleteHeader);
+            
+            thead.appendChild(headerRow);
+            
             if (filteredEntries.length > 0) {
                 filteredEntries.forEach((entry, index) => {
                     const row = document.createElement('tr');
                     
-                    // Create cells for each property except relation
+                    // Create name cell (always visible)
                     const nameCell = document.createElement('td');
                     nameCell.textContent = entry.name;
                     nameCell.dataset.field = 'name';
                     nameCell.dataset.index = index;
                     nameCell.addEventListener('dblclick', startEditing);
-                    // Add click handler for opening detail modal
                     nameCell.addEventListener('click', function() {
                         // Find the actual index in the entries array
                         const entryIndex = entries.findIndex(e => 
@@ -606,67 +694,88 @@
                     });
                     nameCell.style.cursor = 'pointer';
                     nameCell.title = "Click to view details";
+                    nameCell.style.width = privacyMode ? 'calc(100% - 80px)' : '30%';
+                    row.appendChild(nameCell);
                     
-                    const addressCell = document.createElement('td');
-                    addressCell.textContent = entry.address1;
-                    addressCell.dataset.field = 'address1';
-                    addressCell.dataset.index = index;
-                    addressCell.addEventListener('dblclick', startEditing);
+                    // Only add address cells when not in privacy mode
+                    if (!privacyMode) {
+                        // Address cell
+                        const addressCell = document.createElement('td');
+                        addressCell.textContent = entry.address1;
+                        addressCell.dataset.field = 'address1';
+                        addressCell.dataset.index = index;
+                        addressCell.addEventListener('dblclick', startEditing);
+                        addressCell.style.width = '25%';
+                        row.appendChild(addressCell);
+                        
+                        // City cell
+                        const cityCell = document.createElement('td');
+                        cityCell.textContent = entry.city;
+                        cityCell.dataset.field = 'city';
+                        cityCell.dataset.index = index;
+                        cityCell.addEventListener('dblclick', startEditing);
+                        cityCell.style.width = '20%';
+                        row.appendChild(cityCell);
+                        
+                        // State cell
+                        const stateCell = document.createElement('td');
+                        stateCell.textContent = entry.state;
+                        stateCell.dataset.field = 'state';
+                        stateCell.dataset.index = index;
+                        stateCell.addEventListener('dblclick', startEditing);
+                        stateCell.style.width = '10%';
+                        row.appendChild(stateCell);
+                        
+                        // ZIP cell
+                        const zipCell = document.createElement('td');
+                        zipCell.textContent = entry.zip;
+                        zipCell.dataset.field = 'zip';
+                        zipCell.dataset.index = index;
+                        zipCell.addEventListener('dblclick', startEditing);
+                        zipCell.style.width = '15%';
+                        row.appendChild(zipCell);
+                        
+                        // Country cell removed from display, but data still exists in the entry object
+                    }
                     
-                    const cityCell = document.createElement('td');
-                    cityCell.textContent = entry.city;
-                    cityCell.dataset.field = 'city';
-                    cityCell.dataset.index = index;
-                    cityCell.addEventListener('dblclick', startEditing);
-                    
-                    const stateCell = document.createElement('td');
-                    stateCell.textContent = entry.state;
-                    stateCell.dataset.field = 'state';
-                    stateCell.dataset.index = index;
-                    stateCell.addEventListener('dblclick', startEditing);
-                    
-                    const zipCell = document.createElement('td');
-                    zipCell.textContent = entry.zip;
-                    zipCell.dataset.field = 'zip';
-                    zipCell.dataset.index = index;
-                    zipCell.addEventListener('dblclick', startEditing);
-                    
-                    const countryCell = document.createElement('td');
-                    countryCell.textContent = entry.country;
-                    countryCell.dataset.field = 'country';
-                    countryCell.dataset.index = index;
-                    countryCell.addEventListener('dblclick', startEditing);
-                    
-                    // Create preview button
+                    // Create preview button (always visible)
                     const previewCell = document.createElement('td');
+                    previewCell.style.width = '40px';
+                    previewCell.style.minWidth = '40px';
+                    previewCell.style.position = 'sticky';
+                    previewCell.style.right = '40px';
+                    previewCell.style.backgroundColor = 'inherit';
                     const previewBtn = document.createElement('button');
                     previewBtn.className = 'preview-btn';
                     previewBtn.innerHTML = '<i class="fas fa-envelope"></i>';
                     previewBtn.addEventListener('click', () => showEnvelopePreview(entry));
                     previewCell.appendChild(previewBtn);
+                    row.appendChild(previewCell);
                     
-                    // Create delete button
+                    // Create delete button (always visible)
                     const deleteCell = document.createElement('td');
+                    deleteCell.style.width = '40px';
+                    deleteCell.style.minWidth = '40px';
+                    deleteCell.style.position = 'sticky';
+                    deleteCell.style.right = '0';
+                    deleteCell.style.backgroundColor = 'inherit';
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-btn';
                     deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
                     deleteBtn.addEventListener('click', () => deleteEntry(index));
                     deleteCell.appendChild(deleteBtn);
-                    
-                    // Add all cells to row
-                    row.appendChild(nameCell);
-                    row.appendChild(addressCell);
-                    row.appendChild(cityCell);
-                    row.appendChild(stateCell);
-                    row.appendChild(zipCell);
-                    row.appendChild(countryCell);
-                    row.appendChild(previewCell);
                     row.appendChild(deleteCell);
                     
                     tbody.appendChild(row);
                 });
                 
-                table.style.display = 'block';
+                table.style.display = 'table'; // Changed from 'block' to 'table'
+                
+                // Update guest counter
+                const guestCounter = document.getElementById('guestCounter');
+                if (guestCounter) {
+                    guestCounter.textContent = `${filteredEntries.length} Total Guests`;
+                }
             } else {
                 table.style.display = 'none';
             }
@@ -1149,12 +1258,6 @@
                     zipCell.dataset.index = index;
                     zipCell.addEventListener('dblclick', startEditing);
                     
-                    const countryCell = document.createElement('td');
-                    countryCell.textContent = entry.country;
-                    countryCell.dataset.field = 'country';
-                    countryCell.dataset.index = index;
-                    countryCell.addEventListener('dblclick', startEditing);
-                    
                     // Create preview button
                     const previewCell = document.createElement('td');
                     const previewBtn = document.createElement('button');
@@ -1177,7 +1280,6 @@
                     row.appendChild(cityCell);
                     row.appendChild(stateCell);
                     row.appendChild(zipCell);
-                    row.appendChild(countryCell);
                     row.appendChild(previewCell);
                     row.appendChild(deleteCell);
                     

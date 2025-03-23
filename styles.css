@@ -298,6 +298,13 @@ table tr:hover td {
   overflow-y: auto;
   overflow-x: hidden;
   border-radius: 12px;
+  width: 100%;
+}
+
+/* Ensure the table itself has a consistent width */
+#entriesTable {
+  width: 100%;
+  table-layout: fixed;
 }
 
 /* Responsive adjustments */
@@ -361,13 +368,11 @@ table tr:hover td {
 
 /* Make sure the table header has the delete column */
 .table-section table thead tr {
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr 40px 40px;
+  display: table-row; /* Changed from grid */
 }
 
 .table-section table tbody tr {
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr 40px 40px;
+  display: table-row; /* Changed from grid */
 }
 
 /* Add this to your CSS file to make the title smaller */
@@ -443,7 +448,7 @@ table tr:hover td {
 }
 
 /* Update sync button styling with full border radius */
-#syncButton {
+#syncButton, #privacyButton {
   height: 32px;
   padding: 0 0.75rem;
   background-color: var(--purple);
@@ -460,7 +465,7 @@ table tr:hover td {
   white-space: nowrap;
 }
 
-#syncButton:hover {
+#syncButton:hover, #privacyButton:hover {
   background-color: var(--pink-dark);
 }
 
